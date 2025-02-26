@@ -1,54 +1,58 @@
 # MDR-RA
 
-This document provides security documentation concerning the installation of
-software required for the MDR-RA project.
+This document defines updated setup instructions for secure deployments of the DataSHIELD/Opal environment required by the MDR-RA project.
 
-## Prerequisites
+## Operating System
 
-### System Requirements
+The reference operating system for the automated setup of the environment specified by the source files contained in this repository is the server edition of Ubuntu 24.04 LTS. Users are strongly encouraged to install the operating system within a dedicated virtual machine, in order to provide better isolation from other applications and users in the local network and simplify deployment and maintenance steps.
 
-The system shall be. 
+## Deployment Criteria
 
-## Architecture
-## Hardening
+The following principles have been followed during the development of this guide and related files:
 
-### Virtualization
+* **Automation:** We aim to implement a reproducible and verifiable environment using automated setup and maintenance tools.
+* **Containerization**: The procedure will instal the system as an orchestrated containerized environment using the Podman platform. The daemonless and rootless architecture implemented by Podman offers better security and stability compared to systems relying on the execution of a single background process.
+* **Verified Container Images**: Container images with known, documented vulnerabilities won't be included in the system specification files.
+* **System Hardening**: The automation will configure the Ubuntu 24.04 server performing some system hardening where necessary. No ports will be exposed for the Opal application service unless explicitly requested by the user.
 
-Installing the software on a virtualized environment is required in order to provide
-sufficient isolation from other systems in your network.
-
-The system shall be installed on a virtualized environment based on Ubuntu ...
-
-### SSH access
-
-Only allow public key authentication
-
-### Firewall Settings
-### Proxy Configuration
-### Non-root deployment
-
-The execution of DataSHIELD and related components should be confined to the environment
-of a dedicated user with no administrative privileges.
-
-* User creation 
-* Docker Compose
+Please note that after the setup is complete, SSH access will be available only through public key authentication. If remote access for system administration tasks is required, public SSH keys of authorized users must be added to the `.ssh/authorized_keys` file before proceeding with the setup steps.
 
 ## Installation
 
-The following steps describe how to install a DataSHIELD server based on the Opal
-data warehouse system.
+The following steps must be performed on the `bash` shell, either using the virtualization hypervisor's console or within a terminal emulator logged in via SSH. System administration privileges are required (the user must be authorized to use `sudo`).
 
-## Supported Software Releases
+#### 1: Prerequisites
 
+The automated installation require the presence of Git and Ansible tools on the target system:
 
+```bash
+sudo apt-get install git ansible
+```
 
-## Usage
-## Privacy Considerations
+#### 2. Clone this repository
 
-As the project requires the development of algorithms which will operate on highly sensitive data,
-data management systems should prevent the execution of code which could potentially expose and export
-single records with identifiable characteristics.
+Obtain the files hosted within this repository by typing in a terminal:
 
-Detailed documentation on the operations allowed by DataSHIELD during code execution may be found here:
+```bash
+git clone https://github.com/pluribus-one/mdr-ra.git
+```
 
-*  
+#### 3. Start the installation
+
+For a standard, non-public installation, use the following command. Please note that the user should be within the root directory of this repository:
+
+```bash
+ansible-playbook --ask-become-pass playbook.yml
+```
+
+You will be immediately prompted for your password, required to perform system administration tasks. If the service port should be exposed on a public IP, add the `public_ip` tag to the command line options:
+
+```bash
+ansible-playbook --ask-become-pass --tags public_ip playbook.yml
+```
+
+This will add a firewall rule to allow incoming connections on port `8000`. A rate limiting rule will also be added to mitigate possible Brute Force and DDoS attacks.
+
+### 4. Allowing remote connections
+
+If the installation has been performed without exposing the service on a public IP address, a VPN connection is the recommended method to allow clients to connect to the server. If no dedicated services are available, [Tailscale](https://tailscale.com/) provides a quick alternative for the deployment of  
