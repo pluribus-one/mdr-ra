@@ -8,7 +8,7 @@ spec:
   restartPolicy: Always
   containers:
     - name: opal
-      image: "docker.io/obiba/opal:5.0.3"
+      image: "docker.io/obiba/opal:5.1.1"
       imagePullPolicy: IfNotPresent
       ports:
         - containerPort:
@@ -36,7 +36,7 @@ spec:
   restartPolicy: Always
   containers:
     - name: mongo
-      image: "docker.io/bitnami/mongodb:latest"
+      image: "docker.io/bitnami/mongodb:8.0.5"
       imagePullPolicy: IfNotPresent
       volumeMounts:
         - name: mongo-data
@@ -70,7 +70,7 @@ spec:
   restartPolicy: Always
   containers:
     - name: mysql
-      image: "docker.io/bitnami/mysql:latest"
+      image: "docker.io/bitnami/mysql:8.4.4"
       imagePullPolicy: IfNotPresent
       volumeMounts:
         - name: mysql-data
@@ -93,7 +93,7 @@ spec:
   restartPolicy: Always
   containers:
     - name: postgres
-      image: "docker.io/bitnami/postgresql:latest"
+      image: "docker.io/bitnami/postgresql:17.4.0"
       imagePullPolicy: IfNotPresent
       volumeMounts:
         - name: postgres-data
@@ -150,7 +150,7 @@ spec:
   restartPolicy: Always
   containers:
     - name: nginx
-      image: "docker.io/bitnami/nginx:latest"
+      image: "docker.io/bitnami/nginx:1.27.4"
       imagePullPolicy: IfNotPresent
       ports:
         - containerPort: 4443

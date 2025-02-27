@@ -1,12 +1,9 @@
 ---
 - name: MDR-RA DataSHIELD/Opal Installation Playbook
   hosts: localhost
-  vars:
-    datashield_username: datashield
-    datashield_uid: 1090
-    datashield_network: datashield
-    exposed_port: 8000
-    install_dir: datashield_setup
+  vars_files:
+    - default_settings.yml
+    - custom_settings.yml
   tasks:
     - name: Install aptitude
       become: true
@@ -231,18 +228,17 @@
           community.general.ufw:
             rule: allow
             direction: in
-            port: '{{ exposed_port }}'
+            port: '{{ public_https_port }}'
             proto: tcp
             from_ip: '{{ item }}'
-          loop:
-            - 127.0.0.1
+          loop: "{{ allowed_https_client_networks }}"
           tags: ['public_ip']
           when: "'public_ip' in ansible_run_tags"
 
         - name: UFW - Enable rate limiting for the DataSHIELD HTTPS interface
           community.general.ufw:
             rule: limit
-            port: '{{ exposed_port }}'
+            port: '{{ public_https_port }}'
             proto: tcp
           tags: ['public_ip']
           when: "'public_ip' in ansible_run_tags"
@@ -254,9 +250,7 @@
             port: 22
             proto: tcp
             from_ip: '{{ item }}'
-          loop:
-            # TODO: Configure actual client IPs
-            - 192.168.122.0/24
+          loop: "{{ allowed_ssh_client_networks }}"
           tags: ['always']
 
         - name: UFW - Enable Firewall
@@ -305,7 +299,7 @@
       become: true
       become_user: "{{ datashield_username }}"
       containers.podman.podman_network:
-        name: "{{ datashield_network }}"
+        name: "{{ podman_network }}"
       tags: ['always']
 
     - name: Apply the Podman Kube specification
@@ -313,7 +307,7 @@
       become_user: "{{ datashield_username }}"
       ansible.builtin.command: "podman kube play \
                                 --replace \
-                                --network {{ datashield_network }} \
+                                --network {{ podman_network }} \
                                 /home/{{ datashield_username }}/\
                                 {{ install_dir }}/datashield-opal-kube.yml"
       tags: ['always']
