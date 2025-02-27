@@ -5,12 +5,12 @@ DataSHIELD/Opal environment required by the MDR-RA project.
 
 ## Operating System
 
-The reference operating system for the automated setup of the environment
-specified by the source files contained in this repository is the server
-edition of Ubuntu 24.04 LTS. Users are strongly encouraged to install the
-operating system within a dedicated virtual machine, in order to provide better
-isolation from other applications and users in the local network and simplify
-deployment and maintenance steps.
+The recommended operating system for the automated environment setup, as
+outlined by the source files in this repository, is the server edition of
+[Ubuntu 24.04 LTS](https://ubuntu.com/download/server). It is highly advised
+that users install this operating system in a dedicated virtual machine to
+enhance isolation from other applications and users on the local network, as
+well as to streamline deployment and maintenance processes.
 
 ## Deployment Criteria
 
