@@ -1,7 +1,8 @@
-# MDR-RA
+# MDR-RA DataSHIELD/Opal Environment Setup
 
-This document defines updated setup instructions for secure deployments of the
-DataSHIELD/Opal environment required by the MDR-RA project.
+This document defines updated setup instructions for hardened deployments of
+the DataSHIELD/Opal environment required by the MDR-RA project.
+
 
 ## Operating System
 
@@ -12,28 +13,72 @@ that users install this operating system in a dedicated virtual machine to
 enhance isolation from other applications and users on the local network, as
 well as to streamline deployment and maintenance processes.
 
-## Deployment Criteria
 
-The following principles have been followed during the development of this
-guide and related files:
+## Deployment Notes
 
-* **Automation:** We aim to implement a reproducible and verifiable environment
-  using automated setup and maintenance tools.
-* **Containerization**: The procedure will instal the system as an orchestrated
-  containerized environment using the Podman platform. The daemonless and
-  rootless architecture implemented by Podman offers better security and
-  stability compared to systems relying on the execution of a single background
-  process.
-* **Verified Container Images**: Container images with known, documented
-  vulnerabilities won't be included in the system specification files.
-* **System Hardening**: The automation will configure the Ubuntu 24.04 server
-  performing some system hardening where necessary. No ports will be exposed
-  for the Opal application service unless explicitly requested by the user.
+The following notes outline the criteria and steps implemented by this
+installation procedure.
 
-Please note that after the setup is complete, SSH access will be available only
-through public key authentication. If remote access for system administration
-tasks is required, public SSH keys of authorized users must be added to the
-`.ssh/authorized_keys` file before proceeding with the setup steps.
+* The setup has been fully automated using the open source
+  [Ansible](https://docs.ansible.com/) tool to implement software provisioning
+  and configuration using an infrastructure-as-code (IaC) approach. This will
+  ensure that software deployments are fully reproducible and verifiable on
+  a common platform, and provide a base to extend and update the system's
+  specification for the duration of the project with safe and documented
+  upgrade procedures.
+
+* The operating system will be configured to install automatic security
+  upgrades from the official Ubuntu Linux repositories. Automatic reboots won't
+  be activated in order to avoid possible service disruptions, but server
+  administrators are advised to restart the system regularly to ensure kernel
+  security updates are effective.
+
+* The Docker-based containerization solution has been replaced with a
+  [Podman](https://podman.io/)-based equivalent specification, in order to
+  have the system running in rootless mode with contained privileges. Podman
+  is a daemonless container management system, enabling users to control
+  containerized applications directly and resulting in enhanced security and
+  faster container execution times.
+
+* A dedicated user will be configured by the automated setup procedure to
+  execute the containerized environment. This account won't have any
+  administrative privileges, and there is no need for application users and
+  clients to have access to its environment.
+
+* The system specification files will only include container image references
+  with no known vulnerabilities. Users are encouraged to monitor this
+  repository for updates to the list of approved software versions.
+
+* The SSH server will be reconfigured to disable password-based authentication.
+  After the completion of the setup procedure, SSH access will be available
+  only through public key authentication. If remote access for system
+  administration tasks is required, public SSH keys of authorized users must be
+  added to the `.ssh/authorized_keys` file before proceeding with the setup
+  steps.
+
+* The automation will set up the system firewall
+  ([UFW](https://help.ubuntu.com/community/UFW)) to block incoming connections.
+  Services won't be exposed on available network interfaces unless explicitly
+  requested by the user, and only for a limited set of trusted networks or
+  hosts. Refer to the sections below for setup and configuration steps.
+
+* The automation will create a set of self-signed certificates, stored in the
+  `/home/datashield/datashield_setup/https/cert` directory, to enable the HTTPS
+  proxy service. While this will allow the service to establish encrypted
+  connections, it cannot be considered a source of trust in any kind of public
+  network. In order to expose the service to the public internet, users should
+  acquire valid certificates from a trusted authority such as
+  [Let's Encrypt](https://letsencrypt.org/) for a dedicated fully-qualified
+  domain name.
+
+* The Opal web interface is exposed through a dedicated NGINX server
+  functioning as a HTTPS reverse proxy with the ModSecurity web application
+  firewall module enabled. This firewall is configured to enforce the
+  well-known core rule set of application layer rules defined by the
+  [OWASP](https://owasp.org/www-project-modsecurity-core-rule-set/) project.
+  The container image providing this implementation of NGINX is published and
+  maintained directly by Pluribus One.
+
 
 ## Installation
 
@@ -65,8 +110,8 @@ A set of variables allows to customize the installation process according to
 the requirements of the local environment. In the repository's root directory,
 create a file called `custom-settings.yml`. At the very least, you should
 select the set of networks which will be allowed to reach the SSH server on
-port 22. This can be achieved by entering a setting similar to the following
-example in the new file:
+port 22. This can be achieved by entering settings similar to the following
+example in the newly created file:
 
 ```yaml
 ---
@@ -75,21 +120,21 @@ allowed_ssh_client_networks:
   - 192.168.2.0/24
 ```
 
-For a complete overview of available settings, refer to the contents of
+For a complete overview of available options, refer to the contents of
 `default-settings.yml`.
 
-#### 3. Start the installation
+#### 4. Start the installation
 
-For a standard, non-public installation, use the following command. Please note
-that the user should be within the root directory of this repository:
+For a standard installation with no exposed HTTPS service, enter the following
+command at the shell prompt within the root directory of this repository:
 
 ```bash
 ansible-playbook --ask-become-pass playbook.yml
 ```
 
-You will be immediately prompted for your password, required to perform system
-administration tasks. If the service port should be exposed on a public IP, add
-the `public_ip` tag to the command line options:
+You will be immediately prompted for your password, which is required to
+perform system administration tasks. If the HTTPS service port should be
+exposed on a public IP, add the `public_ip` tag to the command line options:
 
 ```bash
 ansible-playbook --ask-become-pass --tags public_ip playbook.yml
@@ -99,10 +144,32 @@ This will add a firewall rule to allow incoming connections on port `8000`. A
 rate limiting rule will also be added to mitigate possible Brute Force and DDoS
 attacks.
 
-### 4. Allowing remote connections
+#### 5. Other methods to allow remote connections
 
 If the installation has been performed without exposing the service on a public
 IP address, a VPN connection is the recommended method to allow clients to
-connect to the server. If no dedicated services are available,
-[Tailscale](https://tailscale.com/) provides a quick alternative for
-the deployment of
+connect to the server. If the organization the server does not offer dedicated
+VPN services, [Tailscale](https://tailscale.com/) is a reliable and quick
+alternative for establishing a dedicated point-to-point connection.
+
+
+## Initialization and Usage
+
+For detailed information about how to configure and use the software, please
+refer to the documentation published by the team at UniVr:
+
+[InfOmics/MDR-RA-Opal-DataSHIELD-documentation](https://github.com/InfOmics/MDR-RA-Opal-DataSHIELD-documentation/)
+
+
+## Container Releases
+
+
+## External Resources
+
+Additional information about DataSHIELD and Opal is available at the following
+links:
+
+* [Automated Disclosure Checks in DataSHIELD](https://wiki.datashield.org/en/statdev/disclosure-checks)
+* [DataSHIELD R Interface (DSI)](https://isglobal-brge.github.io/resource_bookdown/datashield.html#datashield-r-interface-dsi)
+* [Disclosure Control](https://wiki.datashield.org/en/opmanag/disclosure-control)
+* [Privacy Control Level](https://wiki.datashield.org/en/opmanag/privacy-control-level)
