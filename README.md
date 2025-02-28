@@ -163,6 +163,18 @@ refer to the documentation published by the team at UniVr:
 
 ## Container Releases
 
+This table lists the software releases accepted for inclusion in the
+containerized system specification:
+
+| Software                           | Current Verified Release                |
+| -------------                      | -------------                           |
+| Opal                               | `docker.io/obiba/opal:5.1.2`            |
+| MySQL                              | `docker.io/bitnami/mysql:8.4.4`         |
+| MongoDB                            | `docker.iobitnami/mongodb:8.0.5`        |
+| PostgreSQL                         | `docker.io/bitnami/postgresql:17.4.0`   |
+| DataSHIELD / rock / dsOmics / dsML | `docker.io/infomics/rock-omics2:latest` |
+| NGINX                              | ``                                      |
+
 
 ## External Resources
 
