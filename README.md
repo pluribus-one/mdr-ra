@@ -8,7 +8,7 @@ the DataSHIELD/Opal environment required by the MDR-RA project.
 * [Operating System](#operating-system)
 * [Deployment Notes](#deployment-notes)
 * [Installation](#installation)
-* [Initialization and Usage](#initialization-and-usage)
+* [Setup and Usage](#setup-and-usage)
 * [System Maintenance](#system-maintenance)
 * [Container Releases](#container-releases)
 * [Security Assessments](#security-assessments)
@@ -40,10 +40,13 @@ installation procedure.
   upgrade procedures.
 
 * The operating system will be configured to install automatic security
-  upgrades from the official Ubuntu Linux repositories. Automatic reboots won't
-  be activated in order to avoid possible service disruptions, but server
-  administrators are advised to restart the system regularly to ensure kernel
-  security updates are effective.
+  upgrades from the official Ubuntu Linux repositories.
+
+> [!WARNING]
+> Automatic reboots won't
+> be activated in order to avoid possible service disruptions, but server
+> administrators are advised to restart the system regularly to ensure kernel
+> security updates are effective.
 
 * The Docker-based containerization solution has been replaced with a
   [Podman](https://podman.io/)-based equivalent specification, in order to
@@ -173,7 +176,7 @@ dedicated VPN services, [Tailscale](https://tailscale.com/) is a reliable and
 quick alternative for establishing a dedicated point-to-point connection.
 
 
-## Initialization and Usage
+## Setup and Usage
 
 For detailed information about how to configure and use the software, please
 refer to the documentation published by the team at UniVr:
