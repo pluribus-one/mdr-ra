@@ -1,0 +1,240 @@
+---
+apiVersion: v1     ■ missing document start "---"
+kind: Pod
+metadata:
+  name: mdr-ra-opal-server
+spec:
+  hostname: opal
+  restartPolicy: Always
+  containers:
+    - name: opal
+      image: "docker.io/obiba/opal:5.1.2"
+      imagePullPolicy: IfNotPresent
+      ports:
+        - containerPort:
+          protocol: TCP
+      volumeMounts:
+        - name: opal-data
+          mountPath: /srv
+      envFrom:
+        - configMapRef:
+            name: opal-env
+        - configMapRef:
+            name: rock-env
+  volumes:
+    - name: opal-data
+      hostPath:
+        path: /home/datashield/datashield_setup/target/test-opal
+        type: Directory
+---
+apiVersion: v1     ■ missing document start "---"
+kind: Pod
+metadata:
+  name: mdr-ra-mongo
+spec:
+  hostname: mongo
+  restartPolicy: Always
+  containers:
+    - name: mongo
+      image: "docker.io/bitnami/mongodb:8.0.5"
+      imagePullPolicy: IfNotPresent
+      volumeMounts:
+        - name: mongo-data
+          mountPath: /bitnami/mongodb
+      env:
+        - name: MONGODB_INITIAL_PRIMARY_ROOT_USER
+          valueFrom:
+            configMapKeyRef:
+              name: mongo-env
+              key: MONGO_INITDB_ROOT_USERNAME
+        - name: MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD
+          valueFrom:
+            configMapKeyRef:
+              name: mongo-env
+              key: MONGO_INITDB_ROOT_PASSWORD
+      envFrom:
+        - configMapRef:
+            name: mongo-env
+  volumes:
+    - name: mongo-data
+      hostPath:
+        path: /home/datashield/datashield_setup/db/mongo
+        type: Directory
+---
+apiVersion: v1     ■ missing document start "---"
+kind: Pod
+metadata:
+  name: mdr-ra-mysql
+spec:
+  hostname: mysql
+  restartPolicy: Always
+  containers:
+    - name: mysql
+      image: "docker.io/bitnami/mysql:8.4.4"
+      imagePullPolicy: IfNotPresent
+      volumeMounts:
+        - name: mysql-data
+          mountPath: /bitnami/mysql/data
+      envFrom:
+        - configMapRef:
+            name: mysql-env
+  volumes:
+    - name: mysql-data
+      hostPath:
+        path: /home/datashield/datashield_setup/db/mysql
+        type: Directory
+---
+apiVersion: v1     ■ missing document start "---"
+kind: Pod
+metadata:
+  name: mdr-ra-postgres
+spec:
+  hostname: postgres
+  restartPolicy: Always
+  containers:
+    - name: postgres
+      image: "docker.io/bitnami/postgresql:17.4.0"
+      imagePullPolicy: IfNotPresent
+      volumeMounts:
+        - name: postgres-data
+          mountPath: /bitnami/postgresql
+      envFrom:
+        - configMapRef:
+            name: postgres-env
+      env:
+        - name: POSTGRESQL_DATABASE
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-env
+              key: POSTGRES_DB
+        - name: POSTGRESQL_USERNAME
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-env
+              key: POSTGRES_USER
+        - name: POSTGRESQL_PASSWORD
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-env
+              key: POSTGRES_PASSWORD
+  volumes:
+    - name: postgres-data
+      hostPath:
+        path: /home/datashield/datashield_setup/db/postgres
+        type: Directory
+---
+apiVersion: v1     ■ missing document start "---"
+kind: Pod
+metadata:
+  name: mdr-ra-rock
+spec:
+  hostname: rock
+  restartPolicy: Always
+  containers:
+    - name: rock
+      image: "docker.io/infomics/rock-omics2:latest"
+      imagePullPolicy: IfNotPresent
+      ports:
+        - containerPort: 8085
+          protocol: TCP
+      envFrom:
+        - configMapRef:
+            name: rock-env
+---
+apiVersion: v1     ■ missing document start "---"
+kind: Pod
+metadata:
+  name: mdr-ra-http-server
+spec:
+  hostname: nginx
+  restartPolicy: Always
+  containers:
+    - name: nginx
+      image: "quay.io/pluribus_one/nginx-modsec:1.27.0-0"
+      imagePullPolicy: IfNotPresent
+      ports:
+        - containerPort: 4443
+          hostPort: 8000
+          protocol: TCP
+      volumeMounts:
+        - name: nginx-config
+          mountPath: /opt/bitnami/nginx/conf/server_blocks/server.conf
+        - name: https-certs
+          mountPath: /bitnami/certs
+  volumes:
+    - name: nginx-config
+      hostPath:
+        path: /home/datashield/datashield_setup/nginx/server.conf
+        type: File
+    - name: https-certs
+      hostPath:
+        path: /home/datashield/datashield_setup/https/cert
+        type: Directory
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opal-env
+data:
+  OPAL_PORT: 8080
+  OPAL_ADMINISTRATOR_PASSWORD: administrator
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongo-env
+data:
+  MONGO_HOST: mongo
+  MONGO_PORT: 27017
+  MONGO_USER: root
+  MONGO_PASSWORD: example
+  MONGO_INITDB_ROOT_USERNAME: root
+  MONGO_INITDB_ROOT_PASSWORD: example
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-env
+data:
+  MYSQLDATA_DATABASE: opal
+  MYSQLDATA_HOST: mysqldata
+  MYSQLDATA_USER: opal
+  MYSQLDATA_PASSWORD: password
+  MYSQL_DATABASE: opal
+  MYSQL_ROOT_PASSWORD: password
+  MYSQL_USER: opal
+  MYSQL_PASSWORD: password
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mariadb-env
+data:
+  MARIADBDATA_DATABASE: opal
+  MARIADBDATA_HOST: mariadbdata
+  MARIADBDATA_USER: opal
+  MARIADBDATA_PASSWORD: password
+  MYSQL_DATABASE: opal
+  MYSQL_ROOT_PASSWORD: password
+  MYSQL_USER: opal
+  MYSQL_PASSWORD: password
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-env
+data:
+  POSTGRESDATA_DATABASE: opal
+  POSTGRESDATA_HOST: postgresdata
+  POSTGRESDATA_USER: opal
+  POSTGRESDATA_PASSWORD: password
+  POSTGRES_DB: opal
+  POSTGRES_USER: opal
+  POSTGRES_PASSWORD: password
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rock-env
+data:
+  ROCK_HOSTS: "rock:8085"

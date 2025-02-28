@@ -1,0 +1,18 @@
+HostKey /etc/ssh/ssh_host_rsa_key
+HostKey /etc/ssh/ssh_host_ecdsa_key
+HostKey /etc/ssh/ssh_host_ed25519_key
+
+SyslogFacility AUTH
+
+AuthorizedKeysFile  .ssh/authorized_keys
+
+PermitRootLogin no
+
+PasswordAuthentication no
+PubkeyAuthentication yes
+ChallengeResponseAuthentication no
+GSSAPIAuthentication yes
+GSSAPICleanupCredentials no
+UsePAM yes
+
+X11Forwarding no
