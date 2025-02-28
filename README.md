@@ -3,6 +3,18 @@
 This document defines updated setup instructions for hardened deployments of
 the DataSHIELD/Opal environment required by the MDR-RA project.
 
+#### Contents
+
+* [Operating System](#operating-system)
+* [Deployment Notes](#deployment-notes)
+* [Installation](#installation)
+* [Initialization and Usage](#initialization-and-usage)
+* [System Maintenance](#system-maintenance)
+* [Container Releases](#container-releases)
+* [Security Assessments](#security-assessments)
+* [External Resources](#external-resources)
+
+
 
 ## Operating System
 
@@ -51,10 +63,14 @@ installation procedure.
 
 * The SSH server will be reconfigured to disable password-based authentication.
   After the completion of the setup procedure, SSH access will be available
-  only through public key authentication. If remote access for system
-  administration tasks is required, public SSH keys of authorized users must be
-  added to the `.ssh/authorized_keys` file before proceeding with the setup
-  steps.
+  only through public key authentication.
+
+> [!CAUTION]
+>
+> If remote access for system
+> administration tasks is required, public SSH keys of authorized users must
+> be added to the `.ssh/authorized_keys` file before proceeding with the setup
+> steps.
 
 * The automation will set up the system firewall
   ([UFW](https://help.ubuntu.com/community/UFW)) to block incoming connections.
@@ -65,13 +81,15 @@ installation procedure.
 * The automation will create a set of self-signed certificates, stored in the
   `/home/datashield/datashield_setup/https/cert` directory, to enable the HTTPS
   proxy service.
-    > [!CAUTION]
-    > While this will allow the service to establish encrypted
-    > connections, it cannot be considered a source of trust in any kind of
-    > public network. In order to expose the service to the public internet,
-    > users should acquire valid certificates from a trusted authority such as
-    > [Let's Encrypt](https://letsencrypt.org/) for a dedicated fully-qualified
-    > domain name.
+
+> [!CAUTION]
+>
+> While this will allow the service to establish encrypted
+> connections, it cannot be considered a source of trust in any kind of
+> public network. In order to expose the service to the public internet,
+> users should acquire valid certificates from a trusted authority such as
+> [Let's Encrypt](https://letsencrypt.org/) for a dedicated fully-qualified
+> domain name.
 
 * The Opal web interface is exposed through a dedicated NGINX server
   functioning as a HTTPS reverse proxy with the ModSecurity web application
@@ -163,19 +181,44 @@ refer to the documentation published by the team at UniVr:
 [InfOmics/MDR-RA-Opal-DataSHIELD-documentation](https://github.com/InfOmics/MDR-RA-Opal-DataSHIELD-documentation/)
 
 
+## System Maintenance
+
+The automated procedure outlined above will pull all required container images
+and start the system as configured. To perform administrative tasks, in order
+to start and stop the orchestrated system using `podman`, users
+with administrator privileges should access the `datashield` user account with
+the following command:
+
+```bash
+sudo machinectl shell --uid 1090
+```
+
+The system can then be stopped using:
+
+```bash
+podman kube down datashield_setup/datashield-opal-kube.yml
+```
+
+And restarted with `podman kube play`:
+
+```bash
+podman kube play datashield_setup/datashield-opal-kube.yml
+```
+
+
 ## Container Releases
 
 This table lists the software releases accepted for inclusion in the
 containerized system specification:
 
-| Software                           | Current Verified Release                |
-| -------------                      | -------------                           |
-| Opal                               | `docker.io/obiba/opal:5.1.2`            |
-| MySQL                              | `docker.io/bitnami/mysql:8.4.4`         |
-| MongoDB                            | `docker.io/bitnami/mongodb:8.0.5`       |
-| PostgreSQL                         | `docker.io/bitnami/postgresql:17.4.0`   |
-| DataSHIELD / rock / dsOmics / dsML | `docker.io/infomics/rock-omics2:latest` |
-| NGINX                              | `quay.io/pluribus_one/nginx-modsec:`     |
+| Software                           | Current Verified Release                     |
+| -------------                      | -------------                                |
+| Opal                               | `docker.io/obiba/opal:5.1.2`                 |
+| MySQL                              | `docker.io/bitnami/mysql:8.4.4`              |
+| MongoDB                            | `docker.io/bitnami/mongodb:8.0.5`            |
+| PostgreSQL                         | `docker.io/bitnami/postgresql:17.4.0`        |
+| DataSHIELD / rock / dsOmics / dsML | `docker.io/infomics/rock-omics2:latest`      |
+| NGINX                              | `quay.io/pluribus_one/nginx-modsec:1.27.0-0` |
 
 
 ## Security Assessments
