@@ -211,6 +211,9 @@ podman kube play datashield_setup/datashield-opal-kube.yml
 
 ## Container Releases
 
+Where possible, the system will rely on container images maintained by
+[Bitnami](https://bitnami.com/application-catalog) for enhanced security.
+
 This table lists the software releases accepted for inclusion in the
 containerized system specification:
 
