@@ -65,13 +65,13 @@ installation procedure.
 * The automation will create a set of self-signed certificates, stored in the
   `/home/datashield/datashield_setup/https/cert` directory, to enable the HTTPS
   proxy service.
-    [!CAUTION]
-    While this will allow the service to establish encrypted
-    connections, it cannot be considered a source of trust in any kind of public
-    network. In order to expose the service to the public internet, users should
-    acquire valid certificates from a trusted authority such as
-    [Let's Encrypt](https://letsencrypt.org/) for a dedicated fully-qualified
-    domain name.
+    > [!CAUTION]
+    > While this will allow the service to establish encrypted
+    > connections, it cannot be considered a source of trust in any kind of
+    > public network. In order to expose the service to the public internet,
+    > users should acquire valid certificates from a trusted authority such as
+    > [Let's Encrypt](https://letsencrypt.org/) for a dedicated fully-qualified
+    > domain name.
 
 * The Opal web interface is exposed through a dedicated NGINX server
   functioning as a HTTPS reverse proxy with the ModSecurity web application
