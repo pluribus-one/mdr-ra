@@ -64,12 +64,14 @@ installation procedure.
 
 * The automation will create a set of self-signed certificates, stored in the
   `/home/datashield/datashield_setup/https/cert` directory, to enable the HTTPS
-  proxy service. While this will allow the service to establish encrypted
-  connections, it cannot be considered a source of trust in any kind of public
-  network. In order to expose the service to the public internet, users should
-  acquire valid certificates from a trusted authority such as
-  [Let's Encrypt](https://letsencrypt.org/) for a dedicated fully-qualified
-  domain name.
+  proxy service.
+    [!CAUTION]
+    While this will allow the service to establish encrypted
+    connections, it cannot be considered a source of trust in any kind of public
+    network. In order to expose the service to the public internet, users should
+    acquire valid certificates from a trusted authority such as
+    [Let's Encrypt](https://letsencrypt.org/) for a dedicated fully-qualified
+    domain name.
 
 * The Opal web interface is exposed through a dedicated NGINX server
   functioning as a HTTPS reverse proxy with the ModSecurity web application
@@ -148,9 +150,9 @@ attacks.
 
 If the installation has been performed without exposing the service on a public
 IP address, a VPN connection is the recommended method to allow clients to
-connect to the server. If the organization the server does not offer dedicated
-VPN services, [Tailscale](https://tailscale.com/) is a reliable and quick
-alternative for establishing a dedicated point-to-point connection.
+connect to the server. If the organization hosting the server does not offer
+dedicated VPN services, [Tailscale](https://tailscale.com/) is a reliable and
+quick alternative for establishing a dedicated point-to-point connection.
 
 
 ## Initialization and Usage
@@ -170,10 +172,10 @@ containerized system specification:
 | -------------                      | -------------                           |
 | Opal                               | `docker.io/obiba/opal:5.1.2`            |
 | MySQL                              | `docker.io/bitnami/mysql:8.4.4`         |
-| MongoDB                            | `docker.iobitnami/mongodb:8.0.5`        |
+| MongoDB                            | `docker.io/bitnami/mongodb:8.0.5`       |
 | PostgreSQL                         | `docker.io/bitnami/postgresql:17.4.0`   |
 | DataSHIELD / rock / dsOmics / dsML | `docker.io/infomics/rock-omics2:latest` |
-| NGINX                              | ``                                      |
+| NGINX                              | `quay.io/pluribus_one/nginx-modsec:`     |
 
 
 ## Security Assessments
