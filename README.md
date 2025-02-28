@@ -176,6 +176,14 @@ containerized system specification:
 | NGINX                              | ``                                      |
 
 
+## Security Assessments
+
+The HTTP service was scanned using the PostSwigger Burp Suite Professional for
+possible vulnerabilities. Manual checks were performed where necessary to
+verify the outcome of automated assessment procedures. No significant
+vulnerabilities were identified.
+
+
 ## External Resources
 
 Additional information about DataSHIELD and Opal is available at the following
