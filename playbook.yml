@@ -105,6 +105,21 @@
         - "/home/{{ datashield_username }}/{{ install_dir }}/https/cert"
       tags: ['always']
 
+    - name: Create required directories for DataSHIELD data storage
+      become: true
+      become_user: "{{ datashield_username }}"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0750'
+      loop:
+        - "/home/{{ datashield_username }}/{{ install_dir }}/db"
+        - "/home/{{ datashield_username }}/{{ install_dir }}/db/opal"
+        - "/home/{{ datashield_username }}/{{ install_dir }}/db/mongo"
+        - "/home/{{ datashield_username }}/{{ install_dir }}/db/mysql"
+        - "/home/{{ datashield_username }}/{{ install_dir }}/db/postgres"
+      tags: ['always']
+
     - name: HTTPS - Delete existing certificates
       become: true
       ansible.builtin.file:

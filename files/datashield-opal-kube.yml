@@ -24,7 +24,7 @@ spec:
   volumes:
     - name: opal-data
       hostPath:
-        path: /home/datashield/datashield_setup/target/test-opal
+        path: /home/datashield/datashield_setup/db/opal
         type: Directory
 ---
 apiVersion: v1     ■ missing document start "---"

@@ -226,6 +226,32 @@ containerized system specification:
 | DataSHIELD / rock / dsOmics / dsML | `docker.io/infomics/rock-omics2:latest`      |
 | NGINX                              | `quay.io/pluribus_one/nginx-modsec:1.27.0-0` |
 
+### Security Notes
+
+#### 2025-03-04
+
+A review of the `pluribus_one/nginx-modsec` image using the Quay Security
+Scanner on the Quay image repository reveals that, as of the date of this
+writing, the image contains two critical vulnerabilities. These are identified
+as CVE-2023-45853 and CVE-2023-38199.
+
+* **CVE-2023-45853** is attributed to the presence of `zlib` in the base layer
+  of the image, even though the actual vulnerability lies in the `minizip`
+  product. Notably, `minizip` is not included in the final image, which suggests
+  that this finding may be a result of a misinterpretation by the static
+  analysis tool.
+
+* **CVE-2023-38199** is introduced by the inclusion of the OWASP Core Rule Set
+  (CRS) for ModSecurity. In brief, this vulnerability pertains to the potential
+  for an attacker to bypass the Web Application Firewall (WAF), specifically
+  ModSecurity in this case, through a highly specific type of attack involving
+  Content-Type confusion between the WAF and the backend application.
+  An application protected by a Web Application Firewall (WAF), even if
+  potentially susceptible to a highly specific attack vector, is inherently
+  less vulnerable than an application without any WAF protection. Therefore, we
+  have made the informed decision to accept the risk associated with this
+  particular vulnerability in our image, as the benefits of WAF protection
+  outweigh the potential exposure.
 
 ## Security Assessments
 
