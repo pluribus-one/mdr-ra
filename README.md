@@ -131,7 +131,7 @@ git clone https://github.com/pluribus-one/mdr-ra.git
 
 A set of variables allows to customize the installation process according to
 the requirements of the local environment. In the repository's root directory,
-create a file called `custom-settings.yml`. At the very least, you should
+create a file called `custom_settings.yml`. At the very least, you should
 select the set of networks which will be allowed to reach the SSH server on
 port 22. This can be achieved by entering settings similar to the following
 example in the newly created file:
@@ -144,7 +144,7 @@ allowed_ssh_client_networks:
 ```
 
 For a complete overview of available options, refer to the contents of
-`default-settings.yml`.
+`default_settings.yml`.
 
 #### 4. Start the installation
 
