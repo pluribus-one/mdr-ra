@@ -81,18 +81,21 @@ installation procedure.
   requested by the user, and only for a limited set of trusted networks or
   hosts. Refer to the sections below for setup and configuration steps.
 
-* The automation will create a set of self-signed certificates, stored in the
-  `/home/datashield/datashield_setup/https/cert` directory, to enable the HTTPS
+* A set of valid certificates (`privkey.pem`, `fullchain.pem`), if available,
+  may be copied to the `cert/` directory in order to configure the NGINX HTTPS
+  proxy. If no valid certificate files are provided, the  automation will
+  create a set of self-signed certificates, stored in the
+  `/home/mdr-ra/datashield_setup/https/cert` directory, to enable the HTTPS
   proxy service.
 
 > [!CAUTION]
 >
-> While this will allow the service to establish encrypted
-> connections, it cannot be considered a source of trust in any kind of
-> public network. In order to expose the service to the public internet,
-> users should acquire valid certificates from a trusted authority such as
-> [Let's Encrypt](https://letsencrypt.org/) for a dedicated fully-qualified
-> domain name.
+> For users opting to use self-signed certificates: while this will allow the
+> service to establish encrypted connections, it cannot be considered a source
+> of trust in any kind of public network. In order to expose the service to the
+> public internet, users should acquire valid certificates from a trusted
+> authority such as [Let's Encrypt](https://letsencrypt.org/) for a dedicated
+> fully-qualified domain name.
 
 * The Opal web interface is exposed through a dedicated NGINX server
   functioning as a HTTPS reverse proxy with the ModSecurity web application
@@ -126,8 +129,71 @@ Obtain the files hosted within this repository by typing in a terminal:
 ```bash
 git clone https://github.com/pluribus-one/mdr-ra.git
 ```
+#### 3. Configure your SSH client and server for public key authentication
 
-#### 3. Add a custom configuration file
+For increased security and ease of use, SSH access to the server should be
+configured to use key-based authentication instead of passwords. All the
+following commands should be entered as a regular user, with no administrative
+privileges.
+
+##### **On the client machine**
+
+If you do not already have an SSH key pair, create one by running the following
+command on the client machine:
+
+```bash
+ssh-keygen -t ed25519 -a 100 -C "your_email@example.com"
+```
+
+When prompted, press Enter to accept the default location. You may set a
+passphrase for extra security, but it's not mandatory. This procedure will
+create a private key (`~/.ssh/id_ed25519`) and a public key
+(`~/.ssh/id_ed25519.pub`). Only the latter should ever be made public or copied
+anywhere.
+
+Next, copy your public key to the target server:
+
+```bash
+ssh-copy-id -i ~/.ssh/id_ed25519.pub user@your-server-ip
+```
+
+If this command is not available on the client, you may proceed with the
+server's configuration as described below.
+
+##### **On the server**
+
+If the `ssh-copy-id` command is not available on the client machine, you can
+manually add the contents of your public key file to the
+`~/.ssh/authorized_keys` file on the server. Create the `~/.ssh/` directory and
+the `authorized_keys` file if not already present in the target user's home
+directory.
+
+After copying your key, make sure the permissions are set correctly on the
+server side:
+
+```bash
+chmod 700 ~/.ssh
+chmod 600 ~/.ssh/authorized_keys
+```
+
+Once this is done, test the connection:
+
+```bash
+ssh user@your-server-ip
+```
+
+You should now be able to log in from the client using public key
+authentication. If no passphrase was entered at the key creation step, the
+client will login without being prompted for a password.
+
+> [!CAUTION]
+>
+> Failure to properly configure either the SSH client or server for public key
+> authentication may result in the user locking themselves (and others) out of
+> the system. Please exercise caution during this phase and ensure the setup
+> has been tested by following the recommended steps.
+
+#### 4. Add a custom configuration file
 
 A set of variables allows to customize the installation process according to
 the requirements of the local environment. In the repository's root directory,
@@ -146,7 +212,7 @@ allowed_ssh_client_networks:
 For a complete overview of available options, refer to the contents of
 `default_settings.yml`.
 
-#### 4. Start the installation
+#### 5. Start the installation
 
 For a standard installation with no exposed HTTPS service, enter the following
 command at the shell prompt within the root directory of this repository:
@@ -167,7 +233,14 @@ This will add a firewall rule to allow incoming connections on port `8000`. A
 rate limiting rule will also be added to mitigate possible Brute Force and DDoS
 attacks.
 
-#### 5. Other methods to allow remote connections
+> [!DANGER]
+> The playbook allows to skip entirely all firewall configuration steps by
+> adding the option `--skip-tags firewall` to the command line. This option is
+> meant to be used only for testing or debugging purposes, and should *never*
+> be included when launching the software in a production environment.
+
+
+#### 6. Other methods to allow remote connections
 
 If the installation has been performed without exposing the service on a public
 IP address, a VPN connection is the recommended method to allow clients to
@@ -189,7 +262,7 @@ refer to the documentation published by the team at UniVr:
 The automated procedure outlined above will pull all required container images
 and start the system as configured. To perform administrative tasks, in order
 to start and stop the orchestrated system using `podman`, users
-with administrator privileges should access the `datashield` user account with
+with administrator privileges should access the `mdr-ra` user account with
 the following command:
 
 ```bash
