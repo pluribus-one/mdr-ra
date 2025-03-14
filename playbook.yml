@@ -120,6 +120,7 @@
         - "/home/{{ datashield_username }}/{{ install_dir }}/db/postgres"
       tags: ['always']
 
+    # FIXME: Remove or limit to a specific tag
     - name: HTTPS - Delete existing certificates
       become: true
       ansible.builtin.file:
@@ -132,8 +133,85 @@
         - "/home/{{ datashield_username }}\
            /{{ install_dir }}/https/cert\
            /fullchain.pem"
-      tags: ['always']
+      tags: ['never', 'delete_https_certs']
 
+    # HTTPS Certificates Tests
+    - block:
+        - name: HTTPS - Check if privkey.pem is already installed
+          become: true
+          ansible.builtin.stat:
+            path: "/home/{{ datashield_username }}\
+                   /{{ install_dir }}/https/cert\
+                   /privkey.pem"
+          register: https_installed_privkey
+          tags: ['always']
+
+        - name: HTTPS - Check if fullchain.pem is already installed
+          become: true
+          ansible.builtin.stat:
+            path: "/home/{{ datashield_username }}\
+                   /{{ install_dir }}/https/cert\
+                   /fullchain.pem"
+          register: https_installed_fullchain
+          tags: ['always']
+
+        - name: HTTPS - Check if a valid privkey.pem is provided
+          ansible.builtin.stat:
+            path: "certs/privkey.pem"
+          register: https_user_provided_cert_privkey
+          tags: ['always']
+
+        - name: HTTPS - Check if a valid fullchain.pem is provided
+          become_user: "{{ datashield_username }}"
+          ansible.builtin.stat:
+            path: "certs/fullchain.pem"
+          register: https_user_provided_cert_fullchain
+          tags: ['always']
+
+    # HTTPS certificate installation (user-provided)
+    - block:
+        - name: HTTPS - Copy user-provided HTTPS private key and certificate
+          become: true
+          ansible.builtin.copy:
+            src: "certs/{{ item }}"
+            dest: "/home/{{ datashield_username }}\
+                   /{{ install_dir }}/https/cert"
+            owner: "{{ datashield_username }}"
+            group: "{{ datashield_username }}"
+          loop:
+            - privkey.pem
+            - fullchain.pem
+          tags: ['always']
+
+        - name: Set permissions for the user-provided privkey.pem
+          become: true
+          ansible.builtin.file:
+            dest: "/home/{{ datashield_username }}\
+                   /{{ install_dir }}/https/cert/\
+                   privkey.pem"
+            owner: "{{ datashield_username }}"
+            group: "{{ datashield_username }}"
+            mode: '0600'
+          tags: ['always']
+
+        - name: Set permissions for the user-provided fullchain.pem
+          become: true
+          ansible.builtin.file:
+            dest: "/home/{{ datashield_username }}\
+                   /{{ install_dir }}/https/cert/\
+                   fullchain.pem"
+            owner: "{{ datashield_username }}"
+            group: "{{ datashield_username }}"
+            mode: '0644'
+          tags: ['always']
+      when:
+        - not https_installed_privkey.stat.exists
+        - not https_installed_fullchain.stat.exists
+        - https_user_provided_cert_privkey.stat.exists
+        - https_user_provided_cert_fullchain.stat.exists
+      become: true
+
+    # HTTPS certificate generation (self-signed)
     - block:
         - name: HTTPS - Create private CA key with password protection
           community.crypto.openssl_privatekey:
@@ -218,6 +296,11 @@
           run_once: true
           tags: ['always']
 
+      when:
+        - not https_installed_privkey.stat.exists
+        - not https_installed_fullchain.stat.exists
+        - not https_user_provided_cert_privkey.stat.exists
+        - not https_user_provided_cert_fullchain.stat.exists
       become: true
       become_user: "{{ datashield_username }}"
 
@@ -231,13 +314,13 @@
           community.general.ufw:
             default: allow
             direction: outgoing
-          tags: ['always']
+          tags: ['always', 'firewall']
 
         - name: UFW - Block incoming connections
           community.general.ufw:
             default: deny
             direction: incoming
-          tags: ['always']
+          tags: ['always', 'firewall']
 
         - name: UFW - Allow DataSHIELD HTTPS connections
           community.general.ufw:
@@ -247,7 +330,7 @@
             proto: tcp
             from_ip: '{{ item }}'
           loop: "{{ allowed_https_client_networks }}"
-          tags: ['public_ip']
+          tags: ['public_ip', 'firewall']
           when: "'public_ip' in ansible_run_tags"
 
         - name: UFW - Enable rate limiting for the DataSHIELD HTTPS interface
@@ -255,7 +338,7 @@
             rule: limit
             port: '{{ public_https_port }}'
             proto: tcp
-          tags: ['public_ip']
+          tags: ['public_ip', 'firewall']
           when: "'public_ip' in ansible_run_tags"
 
         - name: UFW - Allow SSH connections for system administrators
@@ -266,12 +349,12 @@
             proto: tcp
             from_ip: '{{ item }}'
           loop: "{{ allowed_ssh_client_networks }}"
-          tags: ['always']
+          tags: ['always', 'firewall']
 
         - name: UFW - Enable Firewall
           community.general.ufw:
             state: enabled
-          tags: ['always']
+          tags: ['always', 'firewall']
       become: true
 
     - name: Copy installation and configuration files - datashield-opal-kube.yml
@@ -294,7 +377,7 @@
         - server.conf
       tags: ['always']
 
-    - name: Set permissions for HTTPS - private key
+    - name: Set ownership for the HTTPS private key
       become: true
       become_user: "{{ datashield_username }}"
       ansible.builtin.command: "podman unshare chown 1001:1001 \
@@ -302,7 +385,7 @@
                                 {{ install_dir }}/https/cert/privkey.pem"
       tags: ['always']
 
-    - name: Set permissions for HTTPS certificate
+    - name: Set ownership for the HTTPS certificate
       become: true
       become_user: "{{ datashield_username }}"
       ansible.builtin.command: "podman unshare chown 1001:1001 \
