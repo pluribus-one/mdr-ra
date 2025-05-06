@@ -4,6 +4,10 @@
   vars_files:
     - default_settings.yml
     - custom_settings.yml
+  vars:
+    install_dir: "mdr-ra"
+    install_dir_path: "/opt/{{ install_dir }}"
+    quadlets_dir_path: "/etc/containers/systemd/users/{{ datashield_uid }}"
   tasks:
     - name: Install aptitude
       become: true
@@ -27,6 +31,7 @@
           - systemd-container
           - unattended-upgrades
           - acl
+          - ufw
           - podman
         state: latest
       tags: ['always']
@@ -65,7 +70,7 @@
         enabled: true
       tags: ['always']
 
-    - name: Create a dedicated 'datashield' user
+    - name: Create a dedicated MDR-RA DataSHIELD user
       become: true
       ansible.builtin.user:
         name: "{{ datashield_username }}"
@@ -74,16 +79,7 @@
         create_home: true
       tags: ['always']
 
-    - name: Set permissions for the 'datashield' user home directory
-      become: true
-      ansible.builtin.file:
-        path: "/home/{{ datashield_username }}"
-        owner: "{{ datashield_username }}"
-        group: "{{ datashield_username }}"
-        mode: '700'
-      tags: ['always']
-
-    - name: Enable lingering for the 'datashield' user
+    - name: Enable lingering for the MDR-RA DataSHIELD user
       become: true
       ansible.builtin.command:
       args:
@@ -93,16 +89,18 @@
 
     - name: Create required directories for DataSHIELD setup files
       become: true
-      become_user: "{{ datashield_username }}"
       ansible.builtin.file:
         path: "{{ item }}"
         state: directory
+        owner: "{{ datashield_username }}"
+        group: "{{ datashield_username }}"
+        mode: '0750'
       loop:
-        - "/home/{{ datashield_username }}/{{ install_dir }}"
-        - "/home/{{ datashield_username }}/{{ install_dir }}/nginx"
-        - "/home/{{ datashield_username }}/{{ install_dir }}/https"
-        - "/home/{{ datashield_username }}/{{ install_dir }}/https/ca"
-        - "/home/{{ datashield_username }}/{{ install_dir }}/https/cert"
+        - "{{ install_dir_path }}"
+        - "{{ install_dir_path }}/nginx"
+        - "{{ install_dir_path }}/https"
+        - "{{ install_dir_path }}/https/ca"
+        - "{{ install_dir_path }}/https/cert"
       tags: ['always']
 
     - name: Create required directories for DataSHIELD data storage
@@ -113,11 +111,19 @@
         state: directory
         mode: '0750'
       loop:
-        - "/home/{{ datashield_username }}/{{ install_dir }}/db"
-        - "/home/{{ datashield_username }}/{{ install_dir }}/db/opal"
-        - "/home/{{ datashield_username }}/{{ install_dir }}/db/mongo"
-        - "/home/{{ datashield_username }}/{{ install_dir }}/db/mysql"
-        - "/home/{{ datashield_username }}/{{ install_dir }}/db/postgres"
+        - "{{ install_dir_path }}/db"
+        - "{{ install_dir_path }}/db/opal"
+        - "{{ install_dir_path }}/db/mongo"
+        - "{{ install_dir_path }}/db/postgres"
+      tags: ['always']
+
+    - name: Set ownership for DB data directories owned by non-root users
+      become: true
+      become_user: "{{ datashield_username }}"
+      ansible.builtin.command: "podman unshare chown -R 1001:1001 {{ item }}"
+      with_items:
+        - "{{ install_dir_path }}/db/mongo"
+        - "{{ install_dir_path }}/db/postgres"
       tags: ['always']
 
     - name: HTTPS - Delete existing certificates
@@ -126,18 +132,88 @@
         path: "{{ item }}"
         state: absent
       loop:
-        - "/home/{{ datashield_username }}\
-           /{{ install_dir }}/https/cert\
+        - "{{ install_dir_path }}/https/cert\
            /privkey.pem"
-        - "/home/{{ datashield_username }}\
-           /{{ install_dir }}/https/cert\
+        - "{{ install_dir_path }}/https/cert\
            /fullchain.pem"
-      tags: ['always']
+      tags: ['never', 'delete_https_certs']
 
+    # HTTPS Certificates Tests
+    - block:
+        - name: HTTPS - Check if privkey.pem is already installed
+          become: true
+          ansible.builtin.stat:
+            path: "{{ install_dir_path }}/https/cert\
+                   /privkey.pem"
+          register: https_installed_privkey
+          tags: ['always']
+
+        - name: HTTPS - Check if fullchain.pem is already installed
+          become: true
+          ansible.builtin.stat:
+            path: "{{ install_dir_path }}/https/cert\
+                   /fullchain.pem"
+          register: https_installed_fullchain
+          tags: ['always']
+
+        - name: HTTPS - Check if a valid privkey.pem is provided
+          ansible.builtin.stat:
+            path: "certs/privkey.pem"
+          register: https_user_provided_cert_privkey
+          tags: ['always']
+
+        - name: HTTPS - Check if a valid fullchain.pem is provided
+          become_user: "{{ datashield_username }}"
+          ansible.builtin.stat:
+            path: "certs/fullchain.pem"
+          register: https_user_provided_cert_fullchain
+          tags: ['always']
+
+    # HTTPS certificate installation (user-provided)
+    - block:
+        - name: HTTPS - Copy user-provided HTTPS private key and certificate
+          become: true
+          ansible.builtin.copy:
+            src: "certs/{{ item }}"
+            dest: "{{ install_dir_path }}/https/cert"
+            owner: "{{ datashield_username }}"
+            group: "{{ datashield_username }}"
+          loop:
+            - privkey.pem
+            - fullchain.pem
+          tags: ['always']
+
+        - name: Set permissions for the user-provided privkey.pem
+          become: true
+          ansible.builtin.file:
+            dest: "{{ install_dir_path }}/https/cert/\
+                   privkey.pem"
+            owner: "{{ datashield_username }}"
+            group: "{{ datashield_username }}"
+            mode: '0600'
+          tags: ['always']
+
+        - name: Set permissions for the user-provided fullchain.pem
+          become: true
+          ansible.builtin.file:
+            dest: "{{ install_dir_path }}/https/cert/\
+                   fullchain.pem"
+            owner: "{{ datashield_username }}"
+            group: "{{ datashield_username }}"
+            mode: '0644'
+          tags: ['always']
+      when:
+        - not https_installed_privkey.stat.exists
+        - not https_installed_fullchain.stat.exists
+        - https_user_provided_cert_privkey.stat.exists
+        - https_user_provided_cert_fullchain.stat.exists
+      become: true
+
+    # HTTPS certificate generation (self-signed)
     - block:
         - name: HTTPS - Create private CA key with password protection
           community.crypto.openssl_privatekey:
-            path: "/home/{{ datashield_username }}/{{ install_dir }}/https/ca\
+            path: "{{ install_dir_path }}/https/ca\
                    /ca-certificate.key"
             passphrase: "{{ datashield_username }}"
             cipher: auto
@@ -145,8 +221,7 @@
 
         - name: HTTPS - Create signing request (CSR) for CA certificate
           community.crypto.openssl_csr_pipe:
-            privatekey_path: "/home/{{ datashield_username }}\
-                              /{{ install_dir }}/https/ca\
+            privatekey_path: "{{ install_dir_path }}/https/ca\
                               /ca-certificate.key"
             privatekey_passphrase: "{{ datashield_username }}"
             common_name: MDR-RA CA
@@ -162,12 +237,10 @@
 
         - name: HTTPS - Create self-signed CA certificate from CSR
           community.crypto.x509_certificate:
-            path: "/home/{{ datashield_username }}\
-                   /{{ install_dir }}/https/ca\
+            path: "{{ install_dir_path }}/https/ca\
                    /ca-certificate.pem"
             csr_content: "{{ ca_csr.csr }}"
-            privatekey_path: "/home/{{ datashield_username }}\
-                              /{{ install_dir }}/https/ca\
+            privatekey_path: "{{ install_dir_path }}/https/ca\
                               /ca-certificate.key"
             privatekey_passphrase: "{{ datashield_username }}"
             provider: selfsigned
@@ -175,16 +248,14 @@
 
         - name: HTTPS - Create a private key for the new certificate
           community.crypto.openssl_privatekey:
-            path: "/home/{{ datashield_username }}\
-                   /{{ install_dir }}/https/cert\
+            path: "{{ install_dir_path }}/https/cert\
                    /privkey.pem"
           run_once: true
           tags: ['always']
 
         - name: HTTPS - Create the certificate signing request (CSR)
           community.crypto.openssl_csr_pipe:
-            privatekey_path: "/home/{{ datashield_username }}\
-                              /{{ install_dir }}/https/cert\
+            privatekey_path: "{{ install_dir_path }}/https/cert\
                               /privkey.pem"
             subject_alt_name:
               - "DNS:mdr-ra"
@@ -196,11 +267,9 @@
           community.crypto.x509_certificate_pipe:
             csr_content: "{{ csr.csr }}"
             provider: ownca
-            ownca_path: "/home/{{ datashield_username }}\
-                         /{{ install_dir }}/https/ca\
+            ownca_path: "{{ install_dir_path }}/https/ca\
                          /ca-certificate.pem"
-            ownca_privatekey_path: "/home/{{ datashield_username }}\
-                                    /{{ install_dir }}/https/ca\
+            ownca_privatekey_path: "{{ install_dir_path }}/https/ca\
                                     /ca-certificate.key"
             ownca_privatekey_passphrase: "{{ datashield_username }}"
             ownca_not_after: +3650d
@@ -211,13 +280,17 @@
 
         - name: HTTPS - Write certificate file
           copy:
-            dest: "/home/{{ datashield_username }}\
-                   /{{ install_dir }}/https/cert\
+            dest: "{{ install_dir_path }}/https/cert\
                    /fullchain.pem"
             content: "{{ certificate.certificate }}"
           run_once: true
           tags: ['always']
 
+      when:
+        - not https_installed_privkey.stat.exists
+        - not https_installed_fullchain.stat.exists
+        - not https_user_provided_cert_privkey.stat.exists
+        - not https_user_provided_cert_fullchain.stat.exists
       become: true
       become_user: "{{ datashield_username }}"
 
@@ -231,13 +304,13 @@
           community.general.ufw:
             default: allow
             direction: outgoing
-          tags: ['always']
+          tags: ['always', 'firewall']
 
         - name: UFW - Block incoming connections
           community.general.ufw:
             default: deny
             direction: incoming
-          tags: ['always']
+          tags: ['always', 'firewall']
 
         - name: UFW - Allow DataSHIELD HTTPS connections
           community.general.ufw:
@@ -247,7 +320,7 @@
             proto: tcp
             from_ip: '{{ item }}'
           loop: "{{ allowed_https_client_networks }}"
-          tags: ['public_ip']
+          tags: ['public_ip', 'firewall']
           when: "'public_ip' in ansible_run_tags"
 
         - name: UFW - Enable rate limiting for the DataSHIELD HTTPS interface
@@ -255,7 +328,7 @@
             rule: limit
             port: '{{ public_https_port }}'
             proto: tcp
-          tags: ['public_ip']
+          tags: ['public_ip', 'firewall']
           when: "'public_ip' in ansible_run_tags"
 
         - name: UFW - Allow SSH connections for system administrators
@@ -266,19 +339,19 @@
             proto: tcp
             from_ip: '{{ item }}'
           loop: "{{ allowed_ssh_client_networks }}"
-          tags: ['always']
+          tags: ['always', 'firewall']
 
         - name: UFW - Enable Firewall
           community.general.ufw:
             state: enabled
-          tags: ['always']
+          tags: ['always', 'firewall']
       become: true
 
     - name: Copy installation and configuration files - datashield-opal-kube.yml
       become: true
       ansible.builtin.copy:
         src: "files/datashield-opal-kube.yml"
-        dest: "/home/{{ datashield_username }}/{{ install_dir }}"
+        dest: "{{ install_dir_path }}"
         owner: "{{ datashield_username }}"
         group: "{{ datashield_username }}"
       tags: ['always']
@@ -287,27 +360,25 @@
       become: true
       ansible.builtin.copy:
         src: "files/nginx/{{ item }}"
-        dest: "/home/{{ datashield_username }}/{{ install_dir }}/nginx"
+        dest: "{{ install_dir_path }}/nginx"
         owner: "{{ datashield_username }}"
         group: "{{ datashield_username }}"
       loop:
         - server.conf
       tags: ['always']
 
-    - name: Set permissions for HTTPS - private key
+    - name: Set ownership for the HTTPS private key
       become: true
       become_user: "{{ datashield_username }}"
       ansible.builtin.command: "podman unshare chown 1001:1001 \
-                                /home/{{ datashield_username }}/\
-                                {{ install_dir }}/https/cert/privkey.pem"
+                                {{ install_dir_path }}/https/cert/privkey.pem"
       tags: ['always']
 
-    - name: Set permissions for HTTPS certificate
+    - name: Set ownership for the HTTPS certificate
       become: true
       become_user: "{{ datashield_username }}"
       ansible.builtin.command: "podman unshare chown 1001:1001 \
-                                /home/{{ datashield_username }}/\
-                                {{ install_dir }}/https/cert/fullchain.pem"
+                                {{ install_dir_path }}/https/cert/fullchain.pem"
       tags: ['always']
 
     - name: Create a dedicated Podman network
@@ -317,12 +388,34 @@
         name: "{{ podman_network }}"
       tags: ['always']
 
-    - name: Apply the Podman Kube specification
+    - name: Create required directories for DataSHIELD setup files
+      become: true
+      ansible.builtin.file:
+        path: "{{ quadlets_dir_path }}"
+        state: directory
+        owner: "{{ datashield_username }}"
+        group: "{{ datashield_username }}"
+        mode: '0750'
+
+    - name: Copy quadlet files to install location
+      become: true
+      ansible.builtin.copy:
+        src: "files/opal-datashield.kube"
+        dest: "{{ quadlets_dir_path }}"
+        owner: "{{ datashield_username }}"
+        group: "{{ datashield_username }}"
+
+    - name: Reload systemd daemon and create service definitions
       become: true
       become_user: "{{ datashield_username }}"
-      ansible.builtin.command: "podman kube play \
-                                --replace \
-                                --network {{ podman_network }} \
-                                /home/{{ datashield_username }}/\
-                                {{ install_dir }}/datashield-opal-kube.yml"
-      tags: ['always']
+      ansible.builtin.systemd_service:
+        daemon_reload: true
+        scope: "user"
+
+    - name: Start quadlet service
+      become: true
+      become_user: "{{ datashield_username }}"
+      ansible.builtin.systemd_service:
+        scope: "user"
+        name: "opal-datashield.service"
+        state: "started"

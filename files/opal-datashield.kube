@@ -1,0 +1,14 @@
+[Unit]
+Description=Opal-DataSHIELD server
+
+[Kube]
+Yaml=/opt/mdr-ra/datashield-opal-kube.yml
+AutoUpdate=registry
+LogDriver=journald
+
+[Service]
+Restart=always
+TimeoutSec=900
+
+[Install]
+WantedBy=multi-user.target default.target

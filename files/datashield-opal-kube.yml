@@ -24,7 +24,7 @@ spec:
   volumes:
     - name: opal-data
       hostPath:
-        path: /home/datashield/datashield_setup/db/opal
+        path: /opt/mdr-ra/db/opal
         type: Directory
 ---
 apiVersion: v1
@@ -58,30 +58,7 @@ spec:
   volumes:
     - name: mongo-data
       hostPath:
-        path: /home/datashield/datashield_setup/db/mongo
-        type: Directory
----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: mdr-ra-mysql
-spec:
-  hostname: mysql
-  restartPolicy: Always
-  containers:
-    - name: mysql
-      image: "docker.io/bitnami/mysql:8.4.4"
-      imagePullPolicy: IfNotPresent
-      volumeMounts:
-        - name: mysql-data
-          mountPath: /bitnami/mysql/data
-      envFrom:
-        - configMapRef:
-            name: mysql-env
-  volumes:
-    - name: mysql-data
-      hostPath:
-        path: /home/datashield/datashield_setup/db/mysql
+        path: /opt/mdr-ra/db/mongo
         type: Directory
 ---
 apiVersion: v1
@@ -120,7 +97,7 @@ spec:
   volumes:
     - name: postgres-data
       hostPath:
-        path: /home/datashield/datashield_setup/db/postgres
+        path: /opt/mdr-ra/db/postgres
         type: Directory
 ---
 apiVersion: v1
@@ -132,7 +109,7 @@ spec:
   restartPolicy: Always
   containers:
     - name: rock
-      image: "docker.io/infomics/rock-omics2:latest"
+      image: "quay.io/pluribus_one/mdr-ra-rock:0.2"
       imagePullPolicy: IfNotPresent
       ports:
         - containerPort: 8085
@@ -140,6 +117,13 @@ spec:
       envFrom:
         - configMapRef:
             name: rock-env
+      volumeMounts:
+        - mountPath: /var/lib/rock/R/library
+          name: mdr-ra-rock-dependencies
+  volumes:
+    - name: mdr-ra-rock-dependencies
+      persistentVolumeClaim:
+        claimName: mdr-ra-rock-dependencies
 ---
 apiVersion: v1
 kind: Pod
@@ -150,7 +134,7 @@ spec:
   restartPolicy: Always
   containers:
     - name: nginx
-      image: "quay.io/pluribus_one/nginx-modsec:1.27.0-0"
+      image: "quay.io/pluribus_one/nginx-modsec:1.27.0-2"
       imagePullPolicy: IfNotPresent
       ports:
         - containerPort: 4443
@@ -164,11 +148,11 @@ spec:
   volumes:
     - name: nginx-config
       hostPath:
-        path: /home/datashield/datashield_setup/nginx/server.conf
+        path: /opt/mdr-ra/nginx/server.conf
         type: File
     - name: https-certs
       hostPath:
-        path: /home/datashield/datashield_setup/https/cert
+        path: /opt/mdr-ra/https/cert
         type: Directory
 ---
 apiVersion: v1
