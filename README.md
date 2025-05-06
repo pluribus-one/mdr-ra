@@ -290,12 +290,12 @@ Where possible, the system will rely on container images maintained by
 This table lists the software releases accepted for inclusion in the
 containerized system specification:
 
-| Software                           | Current Verified Release                     |
-| -------------                      | -------------                                |
+| Software                           | Current Verified Release                   |
+| -------------                      | -------------                              |
 | Opal                               | `docker.io/obiba/opal:5.1.2`                 |
 | MongoDB                            | `docker.io/bitnami/mongodb:8.0.5`            |
 | PostgreSQL                         | `docker.io/bitnami/postgresql:17.4.0`        |
-| DataSHIELD / rock / dsOmics / dsML | `docker.io/infomics/rock-omics2:latest`      |
+| DataSHIELD / rock / dsOmics / dsML | `quay.io/pluribus_one/mdr-ra-rock:0.2`       |
 | NGINX                              | `quay.io/pluribus_one/nginx-modsec:1.27.0-0` |
 
 ### Security Notes
