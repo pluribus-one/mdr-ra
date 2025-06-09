@@ -54,3 +54,12 @@ Thumbs.db
 
 # Custom Ansible Playbook configuration file
 custom_settings.yml
+
+# Ansible directory
+.ansible/ 
+
+# Quick access scripts to speed up testing
+scripts/
+
+# To do list 
+todo.md 

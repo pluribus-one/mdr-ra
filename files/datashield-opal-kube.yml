@@ -33,7 +33,7 @@ metadata:
   name: mdr-ra-mongo
 spec:
   hostname: mongo
-  restartPolicy: Always
+  restartPolicy: OnFailure
   containers:
     - name: mongo
       image: "docker.io/bitnami/mongodb:8.0.5"
@@ -67,7 +67,7 @@ metadata:
   name: mdr-ra-postgres
 spec:
   hostname: postgres
-  restartPolicy: Always
+  restartPolicy: OnFailure
   containers:
     - name: postgres
       image: "docker.io/bitnami/postgresql:17.4.0"
@@ -109,7 +109,7 @@ spec:
   restartPolicy: Always
   containers:
     - name: rock
-      image: "quay.io/pluribus_one/mdr-ra-rock:0.2"
+      image: "docker.io/infomics/rock-omics2:latest"
       imagePullPolicy: IfNotPresent
       ports:
         - containerPort: 8085
@@ -174,34 +174,6 @@ data:
   MONGO_PASSWORD: example
   MONGO_INITDB_ROOT_USERNAME: root
   MONGO_INITDB_ROOT_PASSWORD: example
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: mysql-env
-data:
-  MYSQLDATA_DATABASE: opal
-  MYSQLDATA_HOST: mysqldata
-  MYSQLDATA_USER: opal
-  MYSQLDATA_PASSWORD: password
-  MYSQL_DATABASE: opal
-  MYSQL_ROOT_PASSWORD: password
-  MYSQL_USER: opal
-  MYSQL_PASSWORD: password
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: mariadb-env
-data:
-  MARIADBDATA_DATABASE: opal
-  MARIADBDATA_HOST: mariadbdata
-  MARIADBDATA_USER: opal
-  MARIADBDATA_PASSWORD: password
-  MYSQL_DATABASE: opal
-  MYSQL_ROOT_PASSWORD: password
-  MYSQL_USER: opal
-  MYSQL_PASSWORD: password
 ---
 apiVersion: v1
 kind: ConfigMap

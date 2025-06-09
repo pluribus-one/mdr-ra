@@ -1,3 +1,12 @@
+## 2025-06-09
+
+* Added a test to stop the service during the Playbook's execution, if already
+  running
+* Fixed permissions for database directories
+* Fixed restart policies for database services
+* Reverted to the original `rock-omics2` image for stability
+* Updated the documentation to reflect the latest changes
+
 ## 2025-05-06
 
 * Migrated to a Quadlet-based service management for better integration with

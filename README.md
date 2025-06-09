@@ -85,7 +85,7 @@ installation procedure.
   may be copied to the `cert/` directory in order to configure the NGINX HTTPS
   proxy. If no valid certificate files are provided, the  automation will
   create a set of self-signed certificates, stored in the
-  `/home/mdr-ra/datashield_setup/https/cert` directory, to enable the HTTPS
+  `/opt/mdr-ra/https/cert` directory, to enable the HTTPS
   proxy service.
 
 > [!CAUTION]
@@ -129,12 +129,20 @@ Obtain the files hosted within this repository by typing in a terminal:
 ```bash
 git clone https://github.com/pluribus-one/mdr-ra.git
 ```
+
 #### 3. Configure your SSH client and server for public key authentication
 
 For increased security and ease of use, SSH access to the server should be
 configured to use key-based authentication instead of passwords. All the
 following commands should be entered as a regular user, with no administrative
 privileges.
+
+> [!CAUTION]
+>
+> Failure to properly configure either the SSH client or server for public key
+> authentication may result in the user locking themselves (and others) out of
+> the system. Please exercise caution during this phase and ensure the setup
+> has been tested by following the recommended steps.
 
 ##### **On the client machine**
 
@@ -186,13 +194,6 @@ You should now be able to log in from the client using public key
 authentication. If no passphrase was entered at the key creation step, the
 client will login without being prompted for a password.
 
-> [!CAUTION]
->
-> Failure to properly configure either the SSH client or server for public key
-> authentication may result in the user locking themselves (and others) out of
-> the system. Please exercise caution during this phase and ensure the setup
-> has been tested by following the recommended steps.
-
 #### 4. Add a custom configuration file
 
 A set of variables allows to customize the installation process according to
@@ -233,12 +234,13 @@ This will add a firewall rule to allow incoming connections on port `8000`. A
 rate limiting rule will also be added to mitigate possible Brute Force and DDoS
 attacks.
 
+The last step of the playbook may take a while to execute. This behavior is normal and intended.
+
 > [!DANGER]
 > The playbook allows to skip entirely all firewall configuration steps by
 > adding the option `--skip-tags firewall` to the command line. This option is
 > meant to be used only for testing or debugging purposes, and should *never*
 > be included when launching the software in a production environment.
-
 
 #### 6. Other methods to allow remote connections
 
@@ -248,6 +250,16 @@ connect to the server. If the organization hosting the server does not offer
 dedicated VPN services, [Tailscale](https://tailscale.com/) is a reliable and
 quick alternative for establishing a dedicated point-to-point connection.
 
+#### 7. Test the application
+
+Shortly after the playbook finishes executing, the Opal service should be
+reachable (always from localhost, exposed to the public interface only if installed to do so). This can be tested with curl.
+
+```bash
+curl -k https://localhost:8000
+```
+
+This process can be particuraly lenghty on the first run, and it can be monitored by watching the service logs.
 
 ## Setup and Usage
 
@@ -261,8 +273,8 @@ refer to the documentation published by the team at UniVr:
 
 The automated procedure outlined above will pull all required container images
 and start the system as configured. To perform administrative tasks, in order
-to start and stop the orchestrated services using `systemd`, users
-with administrator privileges should access the MDR-RA user account with
+to start and stop the orchestrated system using `systemctl`, users
+with administrator privileges should access the `mdr-ra` user account with
 the following command:
 
 ```bash
@@ -278,9 +290,19 @@ systemctl --user stop opal-datashield
 And restarted with:
 
 ```bash
-systemctl --user start opal-datashield
+systemctl --user restart opal-datashield
 ```
 
+The logs can be viewed by using:
+```bash
+journalctl --user-unit opal-datashield.service
+```
+
+> [!CAUTION]
+>
+> Once the software is installed via Ansible, it will run as a user service by systemd
+> *on boot*. Currently, there's no way to stop this behavior, but we're working on
+> a solution that will allow system administrators to do so.
 
 ## Container Releases
 
@@ -295,8 +317,8 @@ containerized system specification:
 | Opal                               | `docker.io/obiba/opal:5.1.2`                 |
 | MongoDB                            | `docker.io/bitnami/mongodb:8.0.5`            |
 | PostgreSQL                         | `docker.io/bitnami/postgresql:17.4.0`        |
-| DataSHIELD / rock / dsOmics / dsML | `quay.io/pluribus_one/mdr-ra-rock:0.2`       |
-| NGINX                              | `quay.io/pluribus_one/nginx-modsec:1.27.0-0` |
+| DataSHIELD / rock / dsOmics / dsML | `docker.io/infomics/rock-omics2:latest`      |
+| NGINX                              | `quay.io/pluribus_one/nginx-modsec:1.27.0-2` |
 
 ### Security Notes
 
