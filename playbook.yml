@@ -13,7 +13,6 @@
       - "{{ install_dir_path }}/db/postgres"
     quadlets_dir_path: "/etc/containers/systemd/users/{{ datashield_uid }}"
     bitnami_container_internal_uid: 1001
-    public_https_port: 8000
   tasks:
     - name: Install aptitude
       become: true
@@ -354,6 +353,14 @@
         dest: "{{ install_dir_path }}"
         owner: "{{ datashield_username }}"
         group: "{{ datashield_username }}"
+      tags: ['always']
+
+    - name: Set the desired HTTPS service port
+      become: true
+      ansible.builtin.replace:
+        path: "{{ install_dir_path }}/datashield-opal-kube.yml"
+        regexp: '^(\s*hostPort:) .* (# ANSIBLE REPLACE MARKER 1)'
+        replace: '\1 {{ public_https_port }} \2'
       tags: ['always']
 
     - name: Copy installation and configuration files - NGINX files

@@ -138,7 +138,7 @@ spec:
       imagePullPolicy: IfNotPresent
       ports:
         - containerPort: 4443
-          hostPort: 8000
+          hostPort: 443 # ANSIBLE REPLACE MARKER 1
           protocol: TCP
       volumeMounts:
         - name: nginx-config

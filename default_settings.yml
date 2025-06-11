@@ -4,6 +4,8 @@ datashield_uid: 1090
 
 podman_network: datashield
 
+public_https_port: 443
+
 allowed_ssh_client_networks:
   - 127.0.0.1/32
 allowed_https_client_networks:

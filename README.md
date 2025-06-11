@@ -81,9 +81,14 @@ installation procedure.
   requested by the user, and only for a limited set of trusted networks or
   hosts. Refer to the sections below for setup and configuration steps.
 
-* A set of valid certificates (`privkey.pem`, `fullchain.pem`), if available,
-  may be copied to the `cert/` directory in order to configure the NGINX HTTPS
-  proxy. If no valid certificate files are provided, the  automation will
+* A set of valid certificates, if available, may be copied to the `cert/`
+  directory in order to configure the NGINX HTTPS proxy. In order to make them
+  recognizable by the installation tool, the certificate and the corresponding
+  key file must be renamed in the following manner:
+    - `fullchain.pem` (certificate file)
+    - `privkey.pem` (private key file)
+
+* If no valid certificate files are provided, the  automation will
   create a set of self-signed certificates, stored in the
   `/opt/mdr-ra/https/cert` directory, to enable the HTTPS
   proxy service.
@@ -237,6 +242,7 @@ attacks.
 The last step of the playbook may take a while to execute. This behavior is normal and intended.
 
 > [!DANGER]
+>
 > The playbook allows to skip entirely all firewall configuration steps by
 > adding the option `--skip-tags firewall` to the command line. This option is
 > meant to be used only for testing or debugging purposes, and should *never*
@@ -253,13 +259,15 @@ quick alternative for establishing a dedicated point-to-point connection.
 #### 7. Test the application
 
 Shortly after the playbook finishes executing, the Opal service should be
-reachable (always from localhost, exposed to the public interface only if installed to do so). This can be tested with curl.
+reachable (always from localhost, exposed to the public interface only if
+installed to do so). This can be tested with curl.
 
 ```bash
 curl -k https://localhost:8000
 ```
 
-This process can be particuraly lenghty on the first run, and it can be monitored by watching the service logs.
+This process can be particuraly lenghty on the first run, and it can be
+monitored by watching the service logs.
 
 ## Setup and Usage
 
@@ -300,9 +308,8 @@ journalctl --user-unit opal-datashield.service
 
 > [!CAUTION]
 >
-> Once the software is installed via Ansible, it will run as a user service by systemd
-> *on boot*. Currently, there's no way to stop this behavior, but we're working on
-> a solution that will allow system administrators to do so.
+> Once the software is installed via Ansible, it will always be launched as a
+> user service *on each system boot*.
 
 ## Container Releases
 
@@ -312,13 +319,13 @@ Where possible, the system will rely on container images maintained by
 This table lists the software releases accepted for inclusion in the
 containerized system specification:
 
-| Software                           | Current Verified Release                   |
-| -------------                      | -------------                              |
-| Opal                               | `docker.io/obiba/opal:5.1.2`                 |
-| MongoDB                            | `docker.io/bitnami/mongodb:8.0.5`            |
-| PostgreSQL                         | `docker.io/bitnami/postgresql:17.4.0`        |
-| DataSHIELD / rock / dsOmics / dsML | `docker.io/infomics/rock-omics2:latest`      |
-| NGINX                              | `quay.io/pluribus_one/nginx-modsec:1.27.0-2` |
+| Software               | Current Verified Release                     |
+| -------------          | -------------                                |
+| Opal                   | `docker.io/obiba/opal:5.1.2`                 |
+| MongoDB                | `docker.io/bitnami/mongodb:8.0.5`            |
+| PostgreSQL             | `docker.io/bitnami/postgresql:17.4.0`        |
+| DataSHIELD-Rock        | `docker.io/infomics/rock-omics2:latest`      |
+| NGINX                  | `quay.io/pluribus_one/nginx-modsec:1.27.0-2` |
 
 ### Security Notes
 

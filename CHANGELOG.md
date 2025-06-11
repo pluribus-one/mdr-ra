@@ -1,3 +1,11 @@
+## 2025-06-11
+
+* Revert to using 443 as the default port for the HTTPS service. The port is
+  now configurable
+* Extended documentation for the setup of custom HTTPS certificates
+* Documentation: fixed name for the DataSHIELD-Rock container
+* Documentation: various fixes
+
 ## 2025-06-09
 
 * Added a test to stop the service during the Playbook's execution, if already
