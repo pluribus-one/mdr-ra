@@ -241,7 +241,7 @@ attacks.
 
 The last step of the playbook may take a while to execute. This behavior is normal and intended.
 
-> [!DANGER]
+> [!CAUTION]
 >
 > The playbook allows to skip entirely all firewall configuration steps by
 > adding the option `--skip-tags firewall` to the command line. This option is
