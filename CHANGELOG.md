@@ -1,3 +1,9 @@
+## 2025-06-13
+
+* Fixed hostname reference for the PostgreSQL container
+* Removed MongoDB from the containerized environment
+* Removed MongoDB references from the documentation
+
 ## 2025-06-11
 
 * Revert to using 443 as the default port for the HTTPS service. The port is

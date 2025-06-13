@@ -15,7 +15,6 @@ the DataSHIELD/Opal environment required by the MDR-RA project.
 * [External Resources](#external-resources)
 
 
-
 ## Operating System
 
 The recommended operating system for the automated environment setup, as
@@ -235,11 +234,12 @@ exposed on a public IP, add the `public_ip` tag to the command line options:
 ansible-playbook --ask-become-pass --tags public_ip playbook.yml
 ```
 
-This will add a firewall rule to allow incoming connections on port `8000`. A
+This will add a firewall rule to allow incoming connections on port `443`. A
 rate limiting rule will also be added to mitigate possible Brute Force and DDoS
 attacks.
 
-The last step of the playbook may take a while to execute. This behavior is normal and intended.
+The last step of the playbook may take a while to execute. This behavior is
+normal and intended.
 
 > [!CAUTION]
 >
@@ -263,7 +263,7 @@ reachable (always from localhost, exposed to the public interface only if
 installed to do so). This can be tested with curl.
 
 ```bash
-curl -k https://localhost:8000
+curl -k https://localhost
 ```
 
 This process can be particuraly lenghty on the first run, and it can be
@@ -322,7 +322,6 @@ containerized system specification:
 | Software               | Current Verified Release                     |
 | -------------          | -------------                                |
 | Opal                   | `docker.io/obiba/opal:5.1.2`                 |
-| MongoDB                | `docker.io/bitnami/mongodb:8.0.5`            |
 | PostgreSQL             | `docker.io/bitnami/postgresql:17.4.0`        |
 | DataSHIELD-Rock        | `docker.io/infomics/rock-omics2:latest`      |
 | NGINX                  | `quay.io/pluribus_one/nginx-modsec:1.27.0-2` |

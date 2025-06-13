@@ -21,44 +21,43 @@ spec:
             name: opal-env
         - configMapRef:
             name: rock-env
+        - configMapRef:
+            name: postgres-env
+      env:
+        - name: OPAL_ADMINISTRATOR_PASSWORD
+          valueFrom:
+            configMapKeyRef:
+              name: opal-env
+              key: OPAL_ADMINISTRATOR_PASSWORD
+        - name: POSTGRESDATA_DATABASE
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-env
+              key: POSTGRESDATA_DATABASE
+        - name: POSTGRESDATA_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-env
+              key: POSTGRESDATA_HOST
+        - name: POSTGRESDATA_USER
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-env
+              key: POSTGRESDATA_USER
+        - name: POSTGRESDATA_PASSWORD
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-env
+              key: POSTGRESDATA_PASSWORD
+        - name: ROCK_HOSTS
+          valueFrom:
+            configMapKeyRef:
+              name: rock-env
+              key: ROCK_HOSTS
   volumes:
     - name: opal-data
       hostPath:
         path: /opt/mdr-ra/db/opal
-        type: Directory
----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: mdr-ra-mongo
-spec:
-  hostname: mongo
-  restartPolicy: OnFailure
-  containers:
-    - name: mongo
-      image: "docker.io/bitnami/mongodb:8.0.5"
-      imagePullPolicy: IfNotPresent
-      volumeMounts:
-        - name: mongo-data
-          mountPath: /bitnami/mongodb
-      env:
-        - name: MONGODB_INITIAL_PRIMARY_ROOT_USER
-          valueFrom:
-            configMapKeyRef:
-              name: mongo-env
-              key: MONGO_INITDB_ROOT_USERNAME
-        - name: MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD
-          valueFrom:
-            configMapKeyRef:
-              name: mongo-env
-              key: MONGO_INITDB_ROOT_PASSWORD
-      envFrom:
-        - configMapRef:
-            name: mongo-env
-  volumes:
-    - name: mongo-data
-      hostPath:
-        path: /opt/mdr-ra/db/mongo
         type: Directory
 ---
 apiVersion: v1
@@ -166,22 +165,10 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: mongo-env
-data:
-  MONGO_HOST: mongo
-  MONGO_PORT: 27017
-  MONGO_USER: root
-  MONGO_PASSWORD: example
-  MONGO_INITDB_ROOT_USERNAME: root
-  MONGO_INITDB_ROOT_PASSWORD: example
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
   name: postgres-env
 data:
   POSTGRESDATA_DATABASE: opal
-  POSTGRESDATA_HOST: postgresdata
+  POSTGRESDATA_HOST: mdr-ra-postgres
   POSTGRESDATA_USER: opal
   POSTGRESDATA_PASSWORD: password
   POSTGRES_DB: opal
@@ -193,4 +180,4 @@ kind: ConfigMap
 metadata:
   name: rock-env
 data:
-  ROCK_HOSTS: "rock:8085"
+  ROCK_HOSTS: "mdr-ra-rock:8085"

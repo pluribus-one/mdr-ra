@@ -3,6 +3,7 @@ Description=Opal-DataSHIELD server
 
 [Kube]
 Yaml=/opt/mdr-ra/datashield-opal-kube.yml
+Network=datashield
 AutoUpdate=registry
 LogDriver=journald
 
