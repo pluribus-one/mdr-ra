@@ -1,3 +1,7 @@
+##
+
+* Updated README: data encryption
+
 ## 2025-06-13
 
 * Fixed hostname reference for the PostgreSQL container

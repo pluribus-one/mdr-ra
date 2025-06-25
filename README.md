@@ -24,6 +24,10 @@ that users install this operating system in a dedicated virtual machine to
 enhance isolation from other applications and users on the local network, as
 well as to streamline deployment and maintenance processes.
 
+Given the highly sensitive nature of the project's data, it is strongly
+recommended to install Ubuntu on an encrypted storage, particularly
+if the host's storage is not already encrypted.
+
 
 ## Deployment Notes
 
