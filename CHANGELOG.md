@@ -1,6 +1,8 @@
 ## 2025-06-25
 
 * Updated README: data encryption
+* Opal service exposed on port 8000 in order to avoid allowing a non-root user
+  to access the range of privileged ports
 
 ## 2025-06-13
 
