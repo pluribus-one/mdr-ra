@@ -1,7 +1,153 @@
-# MDR-RA DataSHIELD/Opal Environment Setup
+# Abstract
 
 This document defines updated setup instructions for hardened deployments of
 the DataSHIELD/Opal environment required by the MDR-RA project.
+
+It includes a list of steps, guidelines and underlying principles that all
+DataSHIELD installations deployed for the MDR-RA project must strictly adhere
+to in order to be validated, as well as an example of an automated installation
+procedure implemented according to those same steps and principles.
+
+
+# Guidelines and Security Procedures for the Deployment of DataSHIELD
+
+This section provides universally appliable guidelines to be followed when
+deploying DataSHIELD for the purposes required by MDR-RA. The following steps
+complement and extend the deployment instructions defined by the University of
+Verona at [InfOmics/MDR-RA-Opal-DataSHIELD-documentation](https://github.com/InfOmics/MDR-RA-Opal-DataSHIELD-documentation/).
+Users are advised to follow these guidelines strictly in order to be compliant
+with the project's security requirements.
+
+### Installation in a virtualized environment
+
+DataSHIELD must run in a virtualized environment in order to ensure that it's
+properly isolated from other applications which could be possible sources of
+malicious exploits, and to be able to fully back up and restore its environment
+using the snapshot management features provided by a modern hypervisor. A
+dedicated virtualized environment will allow to apply security policies
+tailored for the execution of DataSHIELD to a clean system.
+
+### Full storage encryption
+
+Managing and storing highly sensitive data will require the setup of full disk
+encryption in order to prevent data leaks and unauthorized data recovery and
+access. Most operating systems, including Linux distributions, allow to
+configure disk encryption using the installation wizard.
+
+### Automatic Operating System Updates
+
+Automatic updates must be enabled on the operating system on which DataSHIELD
+will be deployed. Regular updates to the operating system are crucial as they
+often include patches for security vulnerabilities that have been discovered
+since the last update. These vulnerabilities can be exploited by attackers to
+gain unauthorized access, escalate privileges, or perform other malicious
+activities. For a system designed to handle highly sensitive data such as
+DataSHIELD, automating these activities is extremely important in order to
+ensure that patches are applied in a timely manner. server administrators are
+advised to restart the system regularly to ensure kernel security updates are
+effective.
+
+### Dedicated non-privileged DataSHIELD user
+
+The DataSHIELD environment must be run and managed by a standard user with no
+administrative rights on the operating system. This user account must be used
+exclusively for the purposes required by the activation of the DataSHIELD
+containerized environment and not shared for other functions or applications.
+The `home` directory for the new user, as well as all files releated to
+DataSHIELD's deployment, must not be accessible by other non-administrative
+user accounts on the same system.
+
+### Passwordless SSH
+
+The SSH server, if enabled, must be configured to allow only public key
+authentication using strong key generation algorithms. We recommend using
+either ED25519 or 4096-bit RSA keys. OpenSSH clients can easily generate both
+kinds of keys with the following commands:
+
+```bash
+ssh-keygen -t ed25519 -a 100
+```
+
+
+```bash
+ssh-keygen -t rsa -b 4096
+```
+
+
+Password-based authentication must be disabled for all users. Root
+authentication via SSH must be strictly forbidden.
+
+### Rootless and daemonless container management
+
+The container orchestrator required for the deployment of the DataSHIELD
+environment must be run by a non-privileged user on the host operating system.
+Containers are designed to be isolated environments, but running them with
+elevated privileges can weaken this isolation. Using a non-privileged user
+is required to maintain stronger isolation boundaries between the containers
+created for the DataSHIELD environment and the host system.
+
+Additionally, it is strongly advised to opt for a daemonless
+container runtime platform such as [Podman](https://podman.io/) in order to
+reduce the possible impact of a compromised container within the DataSHIELD
+environment.
+
+### Network firewall
+
+The operating system's firewall must be enabled and configured to only allow
+access on specific ports as needed, specifically:
+
+* The port which Opal will use to expose its HTTPS service
+* If needed, the port exposed by the system's SSH server for remote
+  administrative access
+
+Additionally, if the Opal HTTPS service is exposed on a public interface,
+remote access must be strictly limited to the IP addresses of allowed clients,
+as needed within the context of the MDR-RA project.
+
+### HTTPS and Web Application Firewall deployment
+
+The Opal web interface must be exposed through HTTPS to ensure connections are
+encrypted and authenticated. Though self-signed certificates are sufficient for
+an encrypted connection, they won't allow clients to authenticate the server's
+identity: users are strongly encouraged to obtain certificates signed by a
+trusted Certificate Authority (CA) in order to implement a fully trusted
+deployment.
+
+Additionally, exposing a service through a web interface requires special
+consideration for several attack categories which can be particularly dangerous
+when dealing with sensitive data. These must be prevented by performing regular
+security assessments on the application and blocking attack attempts with a Web
+Application Firewall (WAF) pre-emptively configured with a set of rules for the
+most common attack types.
+
+For these reasons, the Opal web interface exposed by the DataSHIELD environment
+must be secured by placing it behind a WAF. A pre-configured container image
+including NGINX with the [ModSecurity](https://modsecurity.org/) WAF and the
+standard [OWASP Core Rule Set](https://coreruleset.org/) has been released
+specifically for the MDR-RA project, and is distributed by Pluribus One at
+`quay.io/pluribus_one/nginx-modsec`. The image can be configured as a standard
+NGINX reverse proxy, and will block incoming malicious traffic matching
+standard protection rules before it reaches the Opal application.
+
+For details on the most common web application security risks, please refer to
+the [OWASP Top Ten](https://owasp.org/www-project-top-ten/).
+
+### Container releases
+
+The container images used for deploying the DataSHIELD environment will be
+regularly monitored and updated to ensure critical vulnerabilities are
+addressed and patched. Pluribus One maintains a list of [verified container
+images](container-releases): only container images included in this list are
+verified as compliant to be used within the scope of the MDR-RA project.
+Administrators and maintainers of DataSHIELD systems must ensure their
+installed software matches the references and versions included in the table,
+and promptly install updates as soon as they're available.
+
+
+# Automated MDR-RA DataSHIELD/Opal Environment Setup
+
+The following section provides a full Ansible-based automation of a DataSHIELD
+setup implementing the guidelines outlined above.
 
 #### Contents
 
@@ -140,7 +286,7 @@ git clone https://github.com/pluribus-one/mdr-ra.git
 
 #### 3. Configure your SSH client and server for public key authentication
 
-For increased security and ease of use, SSH access to the server should be
+For increased security and ease of use, SSH access to the server will be
 configured to use key-based authentication instead of passwords. All the
 following commands should be entered as a regular user, with no administrative
 privileges.
@@ -238,7 +384,7 @@ exposed on a public IP, add the `public_ip` tag to the command line options:
 ansible-playbook --ask-become-pass --tags public_ip playbook.yml
 ```
 
-This will add a firewall rule to allow incoming connections on port `443`. A
+This will add a firewall rule to allow incoming connections on port `8000`. A
 rate limiting rule will also be added to mitigate possible Brute Force and DDoS
 attacks.
 
@@ -359,11 +505,10 @@ as CVE-2023-45853 and CVE-2023-38199.
 
 ## Security Assessments
 
-The HTTP service was scanned using the PostSwigger Burp Suite Professional for
-possible vulnerabilities. Manual checks were performed where necessary to
-verify the outcome of automated assessment procedures. No significant
-vulnerabilities were identified.
-
+* Opal 5.1.2: The HTTP service was scanned using the PostSwigger Burp Suite
+Professional for possible vulnerabilities. Manual checks were performed where
+necessary to verify the outcome of automated assessment procedures. No
+significant vulnerabilities were identified.
 
 ## External Resources
 

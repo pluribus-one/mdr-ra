@@ -1,3 +1,7 @@
+## 2025-06-27
+
+* Updated documentation: updated security guidelines.
+
 ## 2025-06-25
 
 * Updated README: data encryption
