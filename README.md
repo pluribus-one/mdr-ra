@@ -132,12 +132,13 @@ standard protection rules before it reaches the Opal application.
 For details on the most common web application security risks, please refer to
 the [OWASP Top Ten](https://owasp.org/www-project-top-ten/).
 
-### Container releases
+### Verified container images
 
 The container images used for deploying the DataSHIELD environment will be
 regularly monitored and updated to ensure critical vulnerabilities are
-addressed and patched. Pluribus One maintains a list of [verified container
-images](container-releases-1): only container images included in this list are
+addressed and patched. Pluribus One maintains a list of
+[verified container images](#container-releases): only container images
+included in this list are
 verified as compliant to be used within the scope of the MDR-RA project.
 Administrators and maintainers of DataSHIELD systems must ensure their
 installed software matches the references and versions included in the table,
@@ -156,7 +157,7 @@ setup implementing the guidelines outlined above.
 * [Installation](#installation)
 * [Setup and Usage](#setup-and-usage)
 * [System Maintenance](#system-maintenance)
-* [Container Releases](#container-releases-1)
+* [Container Releases](#container-releases)
 * [Security Assessments](#security-assessments)
 * [External Resources](#external-resources)
 
