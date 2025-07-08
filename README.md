@@ -270,11 +270,12 @@ to use `sudo`).
 
 #### 1: Prerequisites
 
-The automated installation require the presence of Git and Ansible tools on the
-target system:
+The automated installation requires the presence of Git, Ansible and Just on
+the target system. These tools will be used to install and manage the
+DataSHIELD platform:
 
 ```bash
-sudo apt-get install git ansible
+sudo apt-get install git just ansible
 ```
 
 #### 2. Clone this repository
@@ -370,6 +371,39 @@ For a complete overview of available options, refer to the contents of
 
 #### 5. Start the installation
 
+##### Using `just`
+
+The `just` tool allows to easily run all the essential commands needed for a
+standard DataSHIELD installation compliant with the requiements of the MDR-RA
+project.
+In order to inspect the set of available commands, run:
+
+```bash
+$ just --list
+
+Available recipes:
+    enter-shell      # Enter a system shell with the user running the DataSHIELD service
+    install          # Install DataSHIELD exposing Opal as an HTTPS service
+    install-no-https # Install DataSHIELD without exposing any HTTPS service
+    start            # Restart the DataSHIELD service
+    status           # Inspect the status of the running DataSHIELD service
+    stop             # Stop the DataSHIELD service
+```
+
+Install the system by running:
+
+```bash
+$ just install
+```
+
+You will be prompted for your password in order to perform the required
+administrative tasks.
+
+##### Using Ansible
+
+Alternatively, you may install the system running the provided Ansible Playbook
+directly.
+
 For a standard installation with no exposed HTTPS service, enter the following
 command at the shell prompt within the root directory of this repository:
 
@@ -431,10 +465,23 @@ refer to the documentation published by the team at UniVr:
 ## System Maintenance
 
 The automated procedure outlined above will pull all required container images
-and start the system as configured. To perform administrative tasks, in order
-to start and stop the orchestrated system using `systemctl`, users
-with administrator privileges should access the `mdr-ra` user account with
-the following command:
+and start the system as configured.
+
+##### Managing the installed system using `just`
+
+The `just` tool used for the installation procedure may also be used for simple
+system management tasks.
+
+* `just status` will display an overview of the installed system service
+* `just stop` will stop the DataSHIELD/Opal service
+* `just start` will start (or restart, if already running) the DataSHIELD/Opal
+  service
+
+##### Advanced system management
+
+To perform administrative tasks, in order to start and stop the orchestrated
+system using `systemctl`, users with administrator privileges should access the
+`mdr-ra` user account with the following command:
 
 ```bash
 sudo machinectl shell --uid 1090
@@ -475,7 +522,7 @@ containerized system specification:
 | Opal                   | `docker.io/obiba/opal:5.1.2`                 |
 | PostgreSQL             | `docker.io/bitnami/postgresql:17.4.0`        |
 | DataSHIELD-Rock        | `docker.io/infomics/rock-omics2:latest`      |
-| NGINX                  | `quay.io/pluribus_one/nginx-modsec:1.27.0-2` |
+| NGINX                  | `quay.io/pluribus_one/nginx-modsec:1.27.0-3` |
 
 ### Security Notes
 

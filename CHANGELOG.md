@@ -1,3 +1,7 @@
+## 2025-07-08
+
+* Updated documentation: added `just` commands to simplify system management.
+
 ## 2025-06-27
 
 * Updated documentation: updated security guidelines.
