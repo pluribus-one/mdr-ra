@@ -133,7 +133,7 @@ spec:
   restartPolicy: Always
   containers:
     - name: nginx
-      image: "quay.io/pluribus_one/nginx-modsec:1.27.0-3"
+      image: "quay.io/pluribus_one/nginx-modsec:1.27.0-2"
       imagePullPolicy: IfNotPresent
       ports:
         - containerPort: 4443
