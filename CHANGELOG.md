@@ -1,3 +1,8 @@
+## 2025-07-09
+
+* Updated documentation: pre-emptively download container images before system
+  startup.
+
 ## 2025-07-08
 
 * Updated documentation: added `just` commands to simplify system management.

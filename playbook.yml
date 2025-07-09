@@ -414,6 +414,34 @@
         group: "{{ datashield_username }}"
       tags: ['always']
 
+    - name: Pull container image - Opal
+      become: true
+      become_user: "{{ datashield_username }}"
+      containers.podman.podman_image:
+        name: docker.io/obiba/opal:5.1.2
+      tags: ['always']
+
+    - name: Pull container image - PostgreSQL
+      become: true
+      become_user: "{{ datashield_username }}"
+      containers.podman.podman_image:
+        name: docker.io/bitnami/postgresql:17.4.0
+      tags: ['always']
+
+    - name: Pull container image - DataSHIELD-Rock
+      become: true
+      become_user: "{{ datashield_username }}"
+      containers.podman.podman_image:
+        name: docker.io/infomics/rock-omics2:latest
+      tags: ['always']
+
+    - name: Pull container image - NGINX + ModSecurity
+      become: true
+      become_user: "{{ datashield_username }}"
+      containers.podman.podman_image:
+        name: quay.io/pluribus_one/nginx-modsec:1.27.0-3
+      tags: ['always']
+
     - name: If present, stop the service
       become: true
       become_user: "{{ datashield_username }}"
