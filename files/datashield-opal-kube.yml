@@ -8,7 +8,7 @@ spec:
   restartPolicy: Always
   containers:
     - name: opal
-      image: "docker.io/obiba/opal:5.1.2"
+      image: "docker.io/obiba/opal:5.1.2" # ANSIBLE REPLACE MARKER OBIBA IMAGE
       imagePullPolicy: IfNotPresent
       ports:
         - containerPort:
@@ -69,7 +69,7 @@ spec:
   restartPolicy: OnFailure
   containers:
     - name: postgres
-      image: "docker.io/bitnami/postgresql:17.4.0"
+      image: "docker.io/bitnami/postgresql:17.4.0" # ANSIBLE REPLACE MARKER POSTGRES IMAGE
       imagePullPolicy: IfNotPresent
       volumeMounts:
         - name: postgres-data
@@ -108,7 +108,7 @@ spec:
   restartPolicy: Always
   containers:
     - name: rock
-      image: "docker.io/infomics/rock-omics2:latest"
+      image: "docker.io/infomics/rock-omics2:latest" # ANSIBLE REPLACE MARKER ROCK IMAGE
       imagePullPolicy: IfNotPresent
       ports:
         - containerPort: 8085
@@ -133,11 +133,11 @@ spec:
   restartPolicy: Always
   containers:
     - name: nginx
-      image: "quay.io/pluribus_one/nginx-modsec:1.27.0-3"
+      image: "quay.io/pluribus_one/nginx-modsec:1.27.0-3" # ANSIBLE REPLACE MARKER NGINX IMAGE
       imagePullPolicy: IfNotPresent
       ports:
         - containerPort: 4443
-          hostPort: 8000 # ANSIBLE REPLACE MARKER 1
+          hostPort: 8000 # ANSIBLE REPLACE MARKER HTTPS PORT
           protocol: TCP
       volumeMounts:
         - name: nginx-config

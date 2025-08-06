@@ -1,0 +1,5 @@
+---
+opal_image_tag : "docker.io/obiba/opal:5.1.2"
+postgres_image_tag : "docker.io/bitnami/postgresql:17.4.0"
+rock_image_tag : "docker.io/infomics/rock-omics2:latest"
+nginx_image_tag : "quay.io/pluribus_one/nginx-modsec:1.27.0-3"

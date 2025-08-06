@@ -164,16 +164,23 @@ setup implementing the guidelines outlined above.
 
 ## Operating System
 
-The recommended operating system for the automated environment setup, as
-outlined by the source files in this repository, is the server edition of
-[Ubuntu 24.04 LTS](https://ubuntu.com/download/server). It is highly advised
-that users install this operating system in a dedicated virtual machine to
-enhance isolation from other applications and users on the local network, as
-well as to streamline deployment and maintenance processes.
+The supported operating systems for the automated environment setup, as
+outlined by the source files in this repository, are the following:
+
+* Ubuntu 24.04 LTS (server edition)
+* Ubuntu 22.04 LTS (server edition)
+* Red Hat Enterprise Linux 9 and compatible derived distributions (Rocky 
+  Linux 9, Oracle Linux 9)
+
+It is highly advised that users install one of these operating systems in a 
+dedicated virtual machine to enhance isolation from other applications and 
+users on the local network, as well as to streamline deployment and maintenance 
+processes. In all circumstances, the deployment machine must be dedicated
+exclusively to DataSHIELD.
 
 Given the highly sensitive nature of the project's data, it is strongly
-recommended to install Ubuntu on an encrypted storage, particularly
-if the host's storage is not already encrypted.
+recommended to install the operating system on an encrypted storage, 
+particularly if the host's storage is not already encrypted.
 
 
 ## Deployment Notes
@@ -190,7 +197,7 @@ installation procedure.
   upgrade procedures.
 
 * The operating system will be configured to install automatic security
-  upgrades from the official Ubuntu Linux repositories.
+  upgrades from the official repositories.
 
 > [!WARNING]
 > Automatic reboots won't
@@ -198,12 +205,17 @@ installation procedure.
 > administrators are advised to restart the system regularly to ensure kernel
 > security updates are effective.
 
-* The Docker-based containerization solution has been replaced with a
+* On the most recent distributions (Ubuntu 24.04 and RHEL 9.x), the 
+  Docker-based containerization solution has been replaced with a
   [Podman](https://podman.io/)-based equivalent specification, in order to
   have the system running in rootless mode with contained privileges. Podman
   is a daemonless container management system, enabling users to control
   containerized applications directly and resulting in enhanced security and
-  faster container execution times.
+  faster container execution times. Legacy systems (in particular, Ubuntu 
+  22.04) where support for Podman is still lacking will run the platform using 
+  Docker Compose: however, given Docker's limitations in providing full 
+  isolation of containerized environments, users of these systems are strongly
+  encouraged to migrate to a more modern distribution.
 
 * A dedicated user will be configured by the automated setup procedure to
   execute the containerized environment. This account won't have any
@@ -226,7 +238,8 @@ installation procedure.
 > steps.
 
 * The automation will set up the system firewall
-  ([UFW](https://help.ubuntu.com/community/UFW)) to block incoming connections.
+  (either [UFW](https://help.ubuntu.com/community/UFW) or 
+  [firewalld](https://firewalld.org/)) to block incoming connections.
   Services won't be exposed on available network interfaces unless explicitly
   requested by the user, and only for a limited set of trusted networks or
   hosts. Refer to the sections below for setup and configuration steps.
@@ -270,12 +283,20 @@ to use `sudo`).
 
 #### 1: Prerequisites
 
-The automated installation requires the presence of Git, Ansible and Just on
-the target system. These tools will be used to install and manage the
+The automated installation requires the presence of Git, Ansible and GNU Make
+on the target system. These tools will be used to install and manage the
 DataSHIELD platform:
 
+##### Ubuntu systems
+
 ```bash
-sudo apt-get install git just ansible
+sudo apt-get install git make ansible
+```
+
+##### Red Hat Enterprise Linux, Rocky Linux, Oracle Linux 9 and compatible systems
+
+```bash
+sudo dnf install git make ansible
 ```
 
 #### 2. Clone this repository
@@ -371,29 +392,24 @@ For a complete overview of available options, refer to the contents of
 
 #### 5. Start the installation
 
-##### Using `just`
+##### Using `make`
 
-The `just` tool allows to easily run all the essential commands needed for a
+The `make` tool allows to easily run all the essential commands needed for a
 standard DataSHIELD installation compliant with the requiements of the MDR-RA
 project.
-In order to inspect the set of available commands, run:
 
-```bash
-$ just --list
+The following commands are available:
 
-Available recipes:
-    enter-shell      # Enter a system shell with the user running the DataSHIELD service
-    install          # Install DataSHIELD exposing Opal as an HTTPS service
-    install-no-https # Install DataSHIELD without exposing any HTTPS service
-    start            # Restart the DataSHIELD service
-    status           # Inspect the status of the running DataSHIELD service
-    stop             # Stop the DataSHIELD service
-```
+* `install`: Install DataSHIELD exposing Opal as an HTTPS service
+* `status`: Inspect the status of the running DataSHIELD service
+* `start`: Restart the DataSHIELD service
+* `stop`: Stop the DataSHIELD service
+* `shell`: Enter a system shell with the user running the DataSHIELD service
 
 Install the system by running:
 
 ```bash
-$ just install
+$ make install
 ```
 
 You will be prompted for your password in order to perform the required
@@ -401,14 +417,17 @@ administrative tasks.
 
 ##### Using Ansible
 
-Alternatively, you may install the system running the provided Ansible Playbook
-directly.
+Alternatively, you may install the system by running one of the provided
+Ansible Playbook specifications. Each provided playbook is designed for a 
+specific Linux distribution; in the following step, make sure to execute the
+playbook tagged with your chosen distribution's name and version. The following 
+examples assume that the installed distribution is Ubuntu 24.04.
 
 For a standard installation with no exposed HTTPS service, enter the following
 command at the shell prompt within the root directory of this repository:
 
 ```bash
-ansible-playbook --ask-become-pass playbook.yml
+ansible-playbook --ask-become-pass playbook-ubuntu2404.yml
 ```
 
 You will be immediately prompted for your password, which is required to
@@ -416,7 +435,7 @@ perform system administration tasks. If the HTTPS service port should be
 exposed on a public IP, add the `public_ip` tag to the command line options:
 
 ```bash
-ansible-playbook --ask-become-pass --tags public_ip playbook.yml
+ansible-playbook --ask-become-pass --tags public_ip playbook-ubuntu2404.yml
 ```
 
 This will add a firewall rule to allow incoming connections on port `8000`. A
@@ -467,20 +486,21 @@ refer to the documentation published by the team at UniVr:
 The automated procedure outlined above will pull all required container images
 and start the system as configured.
 
-##### Managing the installed system using `just`
+##### Managing the installed system using `make`
 
-The `just` tool used for the installation procedure may also be used for simple
+The `make` tool used for the installation procedure may also be used for simple
 system management tasks.
 
-* `just status` will display an overview of the installed system service
-* `just stop` will stop the DataSHIELD/Opal service
-* `just start` will start (or restart, if already running) the DataSHIELD/Opal
+* `make status` will display an overview of the installed system service
+* `make stop` will stop the DataSHIELD/Opal service
+* `make start` will start (or restart, if already running) the DataSHIELD/Opal
   service
 
 ##### Advanced system management
 
-To perform administrative tasks, in order to start and stop the orchestrated
-system using `systemctl`, users with administrator privileges should access the
+To perform administrative tasks on systems where `systemd` is available (Ubuntu
+24.04 and RHEL 9.x), in order to start and stop the orchestrated system
+using `systemctl`, users with administrator privileges should access the
 `mdr-ra` user account with the following command:
 
 ```bash

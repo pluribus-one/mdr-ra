@@ -1,3 +1,11 @@
+## 2025-08-06
+
+* Improved support for multiple Linux distributions: Ubuntu 22.04, 
+  Ubuntu 24.04, Red Hat Enterprise Linux 9.x
+* Updated documentation: replaced `just` with `make` to simplify deployment and
+  system management operations across all supported systems
+* Reviewed documentation to reflect the latest changes
+
 ## 2025-07-09
 
 * Updated documentation: pre-emptively download container images before system

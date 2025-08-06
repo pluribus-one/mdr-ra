@@ -1,0 +1,63 @@
+services:
+  #
+  # Opal
+  #
+  mdr-ra-opal-server:
+    image: docker.io/obiba/opal:5.1.2
+    container_name: mdr-ra-opal-server
+    hostname: opal
+    restart: always
+    expose:
+      - ${OPAL_PORT}
+    links:
+      - mdr-ra-postgres
+      - mdr-ra-rock
+    environment:
+      - OPAL_ADMINISTRATOR_PASSWORD=${OPAL_ADMINISTRATOR_PASSWORD}
+      - POSTGRESDATA_DATABASE=${POSTGRESDATA_DATABASE}
+      - POSTGRESDATA_HOST=${POSTGRESDATA_HOST}
+      - POSTGRESDATA_USER=${POSTGRESDATA_USER}
+      - POSTGRESDATA_PASSWORD=${POSTGRESDATA_PASSWORD}
+      - ROCK_HOSTS=${ROCK_HOSTS}
+    volumes:
+      - /opt/mdr-ra/db/opal:/srv
+
+  # 
+  # PostgreSQL
+  #
+  mdr-ra-postgres:
+    image: docker.io/bitnami/postgresql:17.4.0
+    container_name: mdr-ra-postgres
+    hostname: mdr-ra-postgres
+    restart: always
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - /opt/mdr-ra/db/postgres:/var/lib/postgresql/data
+  
+  #
+  # Rock
+  #
+  mdr-ra-rock:
+    image: docker.io/infomics/rock-omics2:latest
+    container_name: mdr-ra-rock
+    hostname: mdr-ra-rock
+    restart: always
+  
+  #
+  # NGINX + ModSecurity
+  #
+  mdr-ra-http-server:
+    image: quay.io/pluribus_one/nginx-modsec:1.27.0-3 
+    container_name: mdr-ra-http-server
+    hostname: mdr-ra-http-server
+    restart: always
+    links:
+      - mdr-ra-opal-server:opal
+    ports:
+      - "${HTTPS_PORT}:4443"     # HTTPS
+    volumes:
+      - /opt/mdr-ra/https/cert:/bitnami/certs
+      - /opt/mdr-ra/nginx/server.conf:/opt/bitnami/nginx/conf/server_blocks/server.conf
