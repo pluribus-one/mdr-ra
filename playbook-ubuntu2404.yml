@@ -35,7 +35,7 @@
 
         - name: Kill play execution if not running on target distribution
           ansible.builtin.meta: end_play
-          when: 
+          when:
             - ansible_facts.distribution != "Ubuntu"
             - ansible_facts.distribution_major_version != "24"
     # -----------------------------------------------------------------------------
@@ -121,7 +121,7 @@
 
         - name: Restart SSH
           ansible.builtin.systemd_service:
-            name: sshd.service
+            name: ssh.service
             state: restarted
             enabled: true
           tags: ['always']
@@ -152,6 +152,7 @@
             mode: '0750'
           loop:
             - "{{ install_dir_path }}/nginx"
+            - "{{ install_dir_path }}/nginx_logs"
             - "{{ install_dir_path }}/https"
             - "{{ install_dir_path }}/https/ca"
             - "{{ install_dir_path }}/https/cert"
@@ -204,14 +205,14 @@
 
             - name: Check if a valid privkey.pem is provided
               ansible.builtin.stat:
-                path: "certs/privkey.pem"
+                path: "cert/privkey.pem"
               register: https_user_provided_cert_privkey
               tags: ['always']
 
             - name: Check if a valid fullchain.pem is provided
               become_user: "{{ datashield_username }}"
               ansible.builtin.stat:
-                path: "certs/fullchain.pem"
+                path: "cert/fullchain.pem"
               register: https_user_provided_cert_fullchain
               tags: ['always']
 
@@ -225,7 +226,7 @@
           block:
             - name: Copy user-provided HTTPS private key and certificate
               ansible.builtin.copy:
-                src: "certs/{{ item }}"
+                src: "cert/{{ item }}"
                 dest: "{{ install_dir_path }}/https/cert"
                 owner: "{{ datashield_username }}"
                 group: "{{ datashield_username }}"
@@ -423,7 +424,7 @@
             path: "{{ install_dir_path }}/datashield-opal-kube.yml"
             regexp: '^(\s*image:) .* (# ANSIBLE REPLACE MARKER NGINX IMAGE)'
             replace: '\1 "{{ nginx_image_tag }}" \2'
-          tags: ['always']                    
+          tags: ['always']
 
         - name: Copy installation and configuration files - NGINX files
           ansible.builtin.copy:
@@ -433,6 +434,7 @@
             group: "{{ datashield_username }}"
           loop:
             - server.conf
+            - rules.conf
           tags: ['always']
 
         - name: Set ownership for the HTTPS private key

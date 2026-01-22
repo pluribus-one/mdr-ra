@@ -19,7 +19,6 @@
   tasks:
     # -----------------------------------------------------------------------------
     - name: Gather OS data into ansible facts
-      tags: ['always']
       block:
         - name: Display some collected facts
           ansible.builtin.debug:
@@ -32,14 +31,16 @@
               Architecture: {{ ansible_facts.architecture }}
               Memory Total: {{ ansible_facts.memtotal_mb }} MB
               Processor Count: {{ ansible_facts.processor_count }}
+      tags: ['always']
 
-        - name: Kill play execution if not running on target distribution
-          ansible.builtin.meta: end_play
-          when:
-            - ansible_facts.distribution != "Rocky"
-            - ansible_facts.distribution_major_version != "9"
+    - name: Kill play execution if not running on target distribution
+      ansible.builtin.meta: end_play
+      when:
+        - ansible_facts.os_family != "RedHat"
+        - ansible_facts.distribution_major_version != "9"
+      tags: ['always']
     # -----------------------------------------------------------------------------
-    - name: System Package Management and Updates (Rocky 9)
+    - name: System Package Management and Updates
       become: true
       block:
         - name: Install required system packages
@@ -50,6 +51,9 @@
               - gnupg
               - systemd-container
               - podman
+              - bash-completion
+              - policycoreutils
+              - policycoreutils-python-utils
             state: latest
             update_cache: true
 
@@ -62,6 +66,7 @@
           loop:
             - {key: "upgrade_type", value: "security"}
             - {key: "reboot", value: "when-needed"}
+      tags: ['always']
     # -----------------------------------------------------------------------------
     - name: SSH Configuration
       become: true
@@ -134,9 +139,11 @@
             mode: '0750'
           loop:
             - "{{ install_dir_path }}/nginx"
+            - "{{ install_dir_path }}/nginx_logs"
             - "{{ install_dir_path }}/https"
             - "{{ install_dir_path }}/https/ca"
             - "{{ install_dir_path }}/https/cert"
+            - "{{ install_dir_path }}/selinux"
           tags: ['always']
 
         - name: Create required directories for DataSHIELD data storage
@@ -186,14 +193,14 @@
 
             - name: Check if a valid privkey.pem is provided
               ansible.builtin.stat:
-                path: "certs/privkey.pem"
+                path: "cert/privkey.pem"
               register: https_user_provided_cert_privkey
               tags: ['always']
 
             - name: Check if a valid fullchain.pem is provided
               become_user: "{{ datashield_username }}"
               ansible.builtin.stat:
-                path: "certs/fullchain.pem"
+                path: "cert/fullchain.pem"
               register: https_user_provided_cert_fullchain
               tags: ['always']
 
@@ -207,7 +214,7 @@
           block:
             - name: Copy user-provided HTTPS private key and certificate
               ansible.builtin.copy:
-                src: "certs/{{ item }}"
+                src: "cert/{{ item }}"
                 dest: "{{ install_dir_path }}/https/cert"
                 owner: "{{ datashield_username }}"
                 group: "{{ datashield_username }}"
@@ -306,70 +313,49 @@
                 content: "{{ certificate.certificate }}"
               run_once: true
               tags: ['always']
+
     # -----------------------------------------------------------------------------
-    - name: Firewall Configuration (UFW) / (Ubuntu 24, should work for Ubuntu 22 as well)
+    - name: Firewall Configuration (firewalld)
       become: true
       block:
-          - name: Enable firewalld
-            ansible.builtin.systemd:
-              name: firewalld.service
-              state: started
-              enabled: true
-            tags: ['always']
+        - name: Enable firewalld
+          ansible.builtin.systemd:
+            name: firewalld.service
+            state: started
+            enabled: true
+          tags: ['always']
 
-          - name: Nuke existing firewalld configurations
-            ansible.builtin.command: "firewall-cmd --reset-to-default"
-            tags: ['always']
+        # - name: Nuke existing firewalld configurations
+        #   ansible.builtin.command: "firewall-cmd --reset-to-default"
+        #   tags: ['always']
 
-          - name: Get all the active services
-            ansible.builtin.command: "firewall-cmd --list-services"
-            tags: ['always']
+        - name: Get all the active services
+          ansible.builtin.command: "firewall-cmd --list-services"
+          tags: ['always', 'firewall']
 
-          - name: Permanently enable https service, also enable it immediately if possible
-            ansible.posix.firewalld:
-              service: https
-              state: enabled
-              permanent: true
-              immediate: true
-              offline: true
+        - name: Permanently enable the SSH service
+          ansible.posix.firewalld:
+            port: 22/tcp
+            state: enabled
+            permanent: true
+            immediate: true
+            offline: true
+          tags: ['always', 'firewall']
 
-        # UFW Steps that we followed in the other playbooks:
-        #  - reseted the firewall
-        #  - allowed outgoing connections
-        #  - denied by default all incoming connections
-        #  - allowed the https connections to datashield
-        #  - rate limited the https interface
-        #  - allowed ssh for specified connections
-        #  - enabled the firewall
+        - name: Permanently enable the HTTPS service
+          ansible.posix.firewalld:
+            port: "{{ public_https_port }}/tcp"
+            state: enabled
+            permanent: true
+            immediate: true
+            offline: true
+          tags: ['public_ip', 'firewall']
+          when: "'public_ip' in ansible_run_tags"
 
-        # - name: Allow DataSHIELD HTTPS connections
-        #   community.general.ufw:
-        #     rule: allow
-        #     direction: in
-        #     port: '{{ public_https_port }}'
-        #     proto: tcp
-        #     from_ip: '{{ item }}'
-        #   loop: "{{ allowed_https_client_networks }}"
-        #   tags: ['public_ip', 'firewall']
-        #   when: "'public_ip' in ansible_run_tags"
+        - name: Reload firewalld
+          ansible.builtin.command: "firewall-cmd --reload"
+          tags: ['always', 'firewall']
 
-        # - name: Enable rate limiting for the DataSHIELD HTTPS interface
-        #   community.general.ufw:
-        #     rule: limit
-        #     port: '{{ public_https_port }}'
-        #     proto: tcp
-        #   tags: ['public_ip', 'firewall']
-        #   when: "'public_ip' in ansible_run_tags"
-
-        # - name: Allow SSH connections for system administrators
-        #   community.general.ufw:
-        #     rule: allow
-        #     direction: in
-        #     port: 22
-        #     proto: tcp
-        #     from_ip: '{{ item }}'
-        #   loop: "{{ allowed_ssh_client_networks }}"
-        #   tags: ['always', 'firewall']
     # -----------------------------------------------------------------------------
     - name: Application File Copy and Configuration
       become: true
@@ -434,6 +420,27 @@
             group: "{{ datashield_username }}"
           loop:
             - server.conf
+            - rules.conf
+          tags: ['always']
+
+        - name: Copy installation and configuration files - SELinux files
+          ansible.builtin.copy:
+            src: "files/selinux/{{ item }}"
+            dest: "{{ install_dir_path }}/selinux"
+            owner: "{{ datashield_username }}"
+            group: "{{ datashield_username }}"
+          loop:
+            #- allow_container_setattr_usr_dir.pp
+            - allow_container_write_usr_dir.pp
+            - allow_container_usr_fs.pp
+          tags: ['always']
+
+        - name: Install SELinux policies
+          ansible.builtin.command: "semodule -i {{ install_dir_path }}/selinux/{{ item }}"
+          loop:
+            #- allow_container_setattr_usr_dir.pp
+            - allow_container_write_usr_dir.pp
+            - allow_container_usr_fs.pp
           tags: ['always']
 
         - name: Set ownership for the HTTPS private key
@@ -468,7 +475,8 @@
             owner: "{{ datashield_username }}"
             group: "{{ datashield_username }}"
           tags: ['always']
-    # -----------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
     - name: Pull container images
       become: true
       become_user: "{{ datashield_username }}"
@@ -480,7 +488,8 @@
         - "{{ rock_image_tag }}"
         - "{{ nginx_image_tag }}"
       tags: ['always']
-    # -----------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
     - name: Service Management
       become: true
       become_user: "{{ datashield_username }}"

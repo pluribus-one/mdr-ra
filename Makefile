@@ -17,3 +17,6 @@ start:
 
 shell:
 	@utils/shell.sh
+
+uninstall:
+	@utils/uninstall.sh

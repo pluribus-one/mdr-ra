@@ -12,9 +12,9 @@ procedure implemented according to those same steps and principles.
 # Guidelines and Security Procedures for the Deployment of DataSHIELD
 
 This section provides universally appliable guidelines to be followed when
-deploying DataSHIELD for the purposes required by MDR-RA. The following steps
-complement and extend the deployment instructions defined by the University of
-Verona at [InfOmics/MDR-RA-Opal-DataSHIELD-documentation](https://github.com/InfOmics/MDR-RA-Opal-DataSHIELD-documentation/).
+deploying DataSHIELD for the purposes required by MDR-RA. The following 
+principles complement and extend the deployment instructions defined by the 
+University of Verona at [InfOmics/MDR-RA-Opal-DataSHIELD-documentation](https://github.com/InfOmics/MDR-RA-Opal-DataSHIELD-documentation/).
 Users are advised to follow these guidelines strictly in order to be compliant
 with the project's security requirements.
 
@@ -23,7 +23,7 @@ with the project's security requirements.
 DataSHIELD must run in a virtualized environment in order to ensure that it's
 properly isolated from other applications which could be possible sources of
 malicious exploits, and to be able to fully back up and restore its environment
-using the snapshot management features provided by a modern hypervisor. A
+using the snapshot management features provided by modern hypervisors. A
 dedicated virtualized environment will allow to apply security policies
 tailored for the execution of DataSHIELD to a clean system.
 
@@ -43,9 +43,10 @@ since the last update. These vulnerabilities can be exploited by attackers to
 gain unauthorized access, escalate privileges, or perform other malicious
 activities. For a system designed to handle highly sensitive data such as
 DataSHIELD, automating these activities is extremely important in order to
-ensure that patches are applied in a timely manner. server administrators are
-advised to restart the system regularly to ensure kernel security updates are
-effective.
+ensure that patches are applied in a timely manner. While automated reboots are
+not mandatory as they could be potentially disruptive for the project's
+activities, server administrators are advised to restart the system regularly
+to ensure kernel security updates are effectively applied.
 
 ### Dedicated non-privileged DataSHIELD user
 
@@ -74,29 +75,30 @@ ssh-keygen -t rsa -b 4096
 ```
 
 
-Password-based authentication must be disabled for all users. Root
+Password-based remote authentication must be disabled for all users. Root
 authentication via SSH must be strictly forbidden.
+
 
 ### Rootless and daemonless container management
 
 The container orchestrator required for the deployment of the DataSHIELD
 environment must be run by a non-privileged user on the host operating system.
 Containers are designed to be isolated environments, but running them with
-elevated privileges can weaken this isolation. Using a non-privileged user
-is required to maintain stronger isolation boundaries between the containers
+elevated privileges can weaken this isolation. Using a non-privileged user is
+required to maintain stronger isolation boundaries between the containers
 created for the DataSHIELD environment and the host system.
 
-Additionally, it is strongly advised to opt for a daemonless
-container runtime platform such as [Podman](https://podman.io/) in order to
-reduce the possible impact of a compromised container within the DataSHIELD
-environment.
+Additionally, it is strongly advised to opt for a daemonless container runtime
+platform such as [Podman](https://podman.io/) in order to reduce the possible
+impact of a compromised container within the DataSHIELD environment.
+
 
 ### Network firewall
 
 The operating system's firewall must be enabled and configured to only allow
-access on specific ports as needed, specifically:
+access on selected ports as needed, specifically:
 
-* The port which Opal will use to expose its HTTPS service
+* The port to be used by Opal to expose its HTTPS service
 * If needed, the port exposed by the system's SSH server for remote
   administrative access
 
@@ -125,9 +127,9 @@ must be secured by placing it behind a WAF. A pre-configured container image
 including NGINX with the [ModSecurity](https://modsecurity.org/) WAF and the
 standard [OWASP Core Rule Set](https://coreruleset.org/) has been released
 specifically for the MDR-RA project, and is distributed by Pluribus One at
-`quay.io/pluribus_one/nginx-modsec`. The image can be configured as a standard
+`docker.io/pluribusone/nginx-mdr-ra`. The image can be configured as a standard
 NGINX reverse proxy, and will block incoming malicious traffic matching
-standard protection rules before it reaches the Opal application.
+standard protection rules before it reaches Opal's web application.
 
 For details on the most common web application security risks, please refer to
 the [OWASP Top Ten](https://owasp.org/www-project-top-ten/).
@@ -138,17 +140,17 @@ The container images used for deploying the DataSHIELD environment will be
 regularly monitored and updated to ensure critical vulnerabilities are
 addressed and patched. Pluribus One maintains a list of
 [verified container images](#container-releases): only container images
-included in this list are
-verified as compliant to be used within the scope of the MDR-RA project.
-Administrators and maintainers of DataSHIELD systems must ensure their
-installed software matches the references and versions included in the table,
-and promptly install updates as soon as they're available.
+included in this list are verified as compliant to be used within the scope of
+the MDR-RA project.  Administrators and maintainers of DataSHIELD systems must
+ensure their installed software matches the references and versions included in
+the table, and promptly install updates as soon as they're available.
 
 
 # Automated MDR-RA DataSHIELD/Opal Environment Setup
 
-The following section provides a full Ansible-based automation of a DataSHIELD
-setup implementing the guidelines outlined above.
+The following section provides a reference for the deployment of a full 
+Ansible-based automation of a DataSHIELD setup implementing the guidelines
+outlined above.
 
 #### Contents
 
@@ -172,14 +174,14 @@ outlined by the source files in this repository, are the following:
 * Red Hat Enterprise Linux 9 and compatible derived distributions (Rocky 
   Linux 9, Oracle Linux 9)
 
-It is highly advised that users install one of these operating systems in a 
-dedicated virtual machine to enhance isolation from other applications and 
-users on the local network, as well as to streamline deployment and maintenance 
+It is highly advised that users install one of these operating systems in a
+dedicated virtual machine to enhance isolation from other applications and
+users on the local network, as well as to streamline deployment and maintenance
 processes. In all circumstances, the deployment machine must be dedicated
 exclusively to DataSHIELD.
 
 Given the highly sensitive nature of the project's data, it is strongly
-recommended to install the operating system on an encrypted storage, 
+recommended to install the operating system on an encrypted storage,
 particularly if the host's storage is not already encrypted.
 
 
@@ -200,10 +202,9 @@ installation procedure.
   upgrades from the official repositories.
 
 > [!WARNING]
-> Automatic reboots won't
-> be activated in order to avoid possible service disruptions, but server
-> administrators are advised to restart the system regularly to ensure kernel
-> security updates are effective.
+> Automatic reboots won't be activated in order to avoid possible service
+> disruptions, but server administrators are advised to restart the system
+> regularly to ensure kernel security updates are effective.
 
 * On the most recent distributions (Ubuntu 24.04 and RHEL 9.x), the 
   Docker-based containerization solution has been replaced with a
@@ -215,7 +216,7 @@ installation procedure.
   22.04) where support for Podman is still lacking will run the platform using 
   Docker Compose: however, given Docker's limitations in providing full 
   isolation of containerized environments, users of these systems are strongly
-  encouraged to migrate to a more modern distribution.
+  encouraged to migrate to a recent distribution release.
 
 * A dedicated user will be configured by the automated setup procedure to
   execute the containerized environment. This account won't have any
@@ -232,10 +233,9 @@ installation procedure.
 
 > [!CAUTION]
 >
-> If remote access for system
-> administration tasks is required, public SSH keys of authorized users must
-> be added to the `.ssh/authorized_keys` file before proceeding with the setup
-> steps.
+> If remote access for system administration tasks is required, public SSH keys
+> of authorized users must be added to the `.ssh/authorized_keys` file before
+> proceeding with the setup steps.
 
 * The automation will set up the system firewall
   (either [UFW](https://help.ubuntu.com/community/UFW) or 
@@ -251,10 +251,9 @@ installation procedure.
     - `fullchain.pem` (certificate file)
     - `privkey.pem` (private key file)
 
-* If no valid certificate files are provided, the  automation will
-  create a set of self-signed certificates, stored in the
-  `/opt/mdr-ra/https/cert` directory, to enable the HTTPS
-  proxy service.
+* If no valid certificate files are provided, the  automation will create a set
+  of self-signed certificates, stored in the `/opt/mdr-ra/https/cert` 
+  directory, to enable the HTTPS proxy service.
 
 > [!CAUTION]
 >
@@ -293,7 +292,7 @@ DataSHIELD platform:
 sudo apt-get install git make ansible
 ```
 
-##### Red Hat Enterprise Linux, Rocky Linux, Oracle Linux 9 and compatible systems
+##### Red Hat Enterprise Linux, Rocky Linux, Oracle Linux 9 and compatible
 
 ```bash
 sudo dnf install git make ansible
@@ -405,6 +404,9 @@ The following commands are available:
 * `start`: Restart the DataSHIELD service
 * `stop`: Stop the DataSHIELD service
 * `shell`: Enter a system shell with the user running the DataSHIELD service
+* `uninstall`: Remove DataSHIELD services and all related data (*WARNING*: this
+  operation is non-reversible and will cause the loss of any data stored within
+  the `/opt/mdr-ra/` directory tree)
 
 Install the system by running:
 
@@ -414,43 +416,6 @@ $ make install
 
 You will be prompted for your password in order to perform the required
 administrative tasks.
-
-##### Using Ansible
-
-Alternatively, you may install the system by running one of the provided
-Ansible Playbook specifications. Each provided playbook is designed for a 
-specific Linux distribution; in the following step, make sure to execute the
-playbook tagged with your chosen distribution's name and version. The following 
-examples assume that the installed distribution is Ubuntu 24.04.
-
-For a standard installation with no exposed HTTPS service, enter the following
-command at the shell prompt within the root directory of this repository:
-
-```bash
-ansible-playbook --ask-become-pass playbook-ubuntu2404.yml
-```
-
-You will be immediately prompted for your password, which is required to
-perform system administration tasks. If the HTTPS service port should be
-exposed on a public IP, add the `public_ip` tag to the command line options:
-
-```bash
-ansible-playbook --ask-become-pass --tags public_ip playbook-ubuntu2404.yml
-```
-
-This will add a firewall rule to allow incoming connections on port `8000`. A
-rate limiting rule will also be added to mitigate possible Brute Force and DDoS
-attacks.
-
-The last step of the playbook may take a while to execute. This behavior is
-normal and intended.
-
-> [!CAUTION]
->
-> The playbook allows to skip entirely all firewall configuration steps by
-> adding the option `--skip-tags firewall` to the command line. This option is
-> meant to be used only for testing or debugging purposes, and should *never*
-> be included when launching the software in a production environment.
 
 #### 6. Other methods to allow remote connections
 
@@ -467,11 +432,8 @@ reachable (always from localhost, exposed to the public interface only if
 installed to do so). This can be tested with curl.
 
 ```bash
-curl -k https://localhost
+curl -k https://localhost:8000
 ```
-
-This process can be particuraly lenghty on the first run, and it can be
-monitored by watching the service logs.
 
 ## Setup and Usage
 
@@ -498,13 +460,12 @@ system management tasks.
 
 ##### Advanced system management
 
-To perform administrative tasks on systems where `systemd` is available (Ubuntu
-24.04 and RHEL 9.x), in order to start and stop the orchestrated system
-using `systemctl`, users with administrator privileges should access the
-`mdr-ra` user account with the following command:
+In order to start and stop the orchestrated system using `systemctl`, users
+with administrator privileges should access the `mdr-ra` user account with the
+following command:
 
 ```bash
-sudo machinectl shell --uid 1090
+make shell
 ```
 
 The system can then be stopped with the following command:
@@ -520,29 +481,43 @@ systemctl --user restart opal-datashield
 ```
 
 The logs can be viewed by using:
+
 ```bash
 journalctl --user-unit opal-datashield.service
 ```
 
+The configuration files for the NGINX proxy and the ModSecurity web application
+firewall module are stored at the following location:
+```
+/opt/mdr-ra/nginx/
+```
+
+NGINX's `access` and `error` logs can be inspected at the following path:
+
+```
+/opt/mdr-ra/nginx_logs/
+```
+
 > [!CAUTION]
 >
-> Once the software is installed via Ansible, it will always be launched as a
-> user service *on each system boot*.
+> Once the software is installed, it will always be launched as a user service
+> *on each system boot*.
+
 
 ## Container Releases
 
-Where possible, the system will rely on container images maintained by
-[Bitnami](https://bitnami.com/application-catalog) for enhanced security.
+Where possible, the system will rely on hardened container images for enhanced 
+security.
 
 This table lists the software releases accepted for inclusion in the
 containerized system specification:
 
-| Software               | Current Verified Release                     |
-| -------------          | -------------                                |
-| Opal                   | `docker.io/obiba/opal:5.1.2`                 |
-| PostgreSQL             | `docker.io/bitnami/postgresql:17.4.0`        |
-| DataSHIELD-Rock        | `docker.io/infomics/rock-omics2:latest`      |
-| NGINX                  | `quay.io/pluribus_one/nginx-modsec:1.27.0-3` |
+| Software               | Current Verified Release                      |
+| -------------          | -------------                                 |
+| Opal                   | `docker.io/obiba/opal:5.1.3`                  |
+| PostgreSQL             | `docker.io/library/postgresql:17.7`           |
+| DataSHIELD-Rock        | `docker.io/infomics/rock-omics2:latest`       |
+| NGINX                  | `docker.io/pluribusone/nginx-mdr-ra:1.29.3-3` |
 
 ### Security Notes
 

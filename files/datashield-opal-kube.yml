@@ -8,7 +8,7 @@ spec:
   restartPolicy: Always
   containers:
     - name: opal
-      image: "docker.io/obiba/opal:5.1.2" # ANSIBLE REPLACE MARKER OBIBA IMAGE
+      image: "docker.io/obiba/opal:5.1.3" # ANSIBLE REPLACE MARKER OPAL IMAGE
       imagePullPolicy: IfNotPresent
       ports:
         - containerPort:
@@ -133,7 +133,7 @@ spec:
   restartPolicy: Always
   containers:
     - name: nginx
-      image: "quay.io/pluribus_one/nginx-modsec:1.27.0-3" # ANSIBLE REPLACE MARKER NGINX IMAGE
+      image: "docker.io/pluribusone/nginx-mdr-ra:1.29.3-3" # ANSIBLE REPLACE MARKER NGINX IMAGE
       imagePullPolicy: IfNotPresent
       ports:
         - containerPort: 4443
@@ -141,14 +141,26 @@ spec:
           protocol: TCP
       volumeMounts:
         - name: nginx-config
-          mountPath: /opt/bitnami/nginx/conf/server_blocks/server.conf
+          mountPath: /etc/nginx/conf.d/server.conf
+        - name: modsecurity-rules
+          mountPath: /etc/nginx/modsec/rules.conf
+        - name: nginx-logs
+          mountPath: /var/log/nginx_opal
         - name: https-certs
-          mountPath: /bitnami/certs
+          mountPath: /etc/nginx/cert
   volumes:
     - name: nginx-config
       hostPath:
         path: /opt/mdr-ra/nginx/server.conf
         type: File
+    - name: modsecurity-rules
+      hostPath:
+        path: /opt/mdr-ra/nginx/rules.conf
+        type: File
+    - name: nginx-logs
+      hostPath:
+        path: /opt/mdr-ra/nginx_logs
+        type: Directory
     - name: https-certs
       hostPath:
         path: /opt/mdr-ra/https/cert

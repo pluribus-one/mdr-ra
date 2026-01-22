@@ -5,7 +5,7 @@ source /etc/os-release
 if [ "$ID" = "ubuntu" ] && [ "$VERSION_ID" = "22.04" ]; then
     PLAYBOOK_FILE="playbook-ubuntu2204.yml"
 elif [ "$ID" = "ubuntu" ] && [ "$VERSION_ID" = "24.04" ]; then
-    PLAYBOOK_FILE="playbook-ubuntu2204.yml"
+    PLAYBOOK_FILE="playbook-ubuntu2404.yml"
 elif [ "$PLATFORM_ID" = "platform:el9" ]; then
     PLAYBOOK_FILE="playbook-rocky9.yml"
 else

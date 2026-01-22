@@ -15,4 +15,4 @@ else
     exit 1
 fi
 
-machinectl shell --uid "$MDR_RA_UID" "$MDR_RA_USER"@.host $(which bash)
+sudo machinectl shell --uid "$MDR_RA_UID" "$MDR_RA_USER"@.host $(which bash)
