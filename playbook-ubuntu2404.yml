@@ -388,7 +388,7 @@
 
         - name: Enable rate limiting for the DataSHIELD HTTPS interface
           community.general.ufw:
-            rule: limit
+            rule: allow
             port: '{{ public_https_port }}'
             proto: tcp
           tags: ['public_ip', 'firewall']
