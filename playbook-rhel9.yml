@@ -8,19 +8,17 @@
   vars:
     install_dir: "mdr-ra"
     install_dir_path: "/opt/{{ install_dir }}"
-    kube_spec: "{{ install_dir_path }}/datashield-opal-kube.yml"
     storage_dir_path_list:
       - "{{ install_dir_path }}/db/opal"
       - "{{ install_dir_path }}/db/mongo"
       - "{{ install_dir_path }}/db/postgres"
     quadlets_dir_path: "/etc/containers/systemd/users/{{ datashield_uid }}"
     bitnami_container_internal_uid: 1001
-    gather_facts: true
+  gather_facts: true
 
   tasks:
     # -----------------------------------------------------------------------------
     - name: Gather OS data into ansible facts
-      tags: ['always']
       block:
         - name: Display some collected facts
           ansible.builtin.debug:
@@ -33,89 +31,42 @@
               Architecture: {{ ansible_facts.architecture }}
               Memory Total: {{ ansible_facts.memtotal_mb }} MB
               Processor Count: {{ ansible_facts.processor_count }}
+      tags: ['always']
 
-        - name: Kill play execution if not running on target distribution
-          ansible.builtin.meta: end_play
-          when:
-            - ansible_facts.distribution != "Ubuntu"
-            - ansible_facts.distribution_major_version != "22"
+    - name: Kill play execution if not running on target distribution
+      ansible.builtin.meta: end_play
+      when:
+        - ansible_facts.os_family != "RedHat"
+        - ansible_facts.distribution_major_version != "9"
+      tags: ['always']
     # -----------------------------------------------------------------------------
-    - name: System Package Management and Updates (Ubuntu 24)
-      become : true
-      block:
-        - name: Install aptitude
-          ansible.builtin.apt:
-            name:
-              - aptitude
-            state: latest
-            update_cache: true
-          tags: ['always']
-
-        - name: Install required system packages
-          ansible.builtin.apt:
-            name:
-              - ca-certificates
-              - curl
-              - gnupg
-              - unattended-upgrades
-              - systemd-container
-              - acl
-              - ufw
-            state: latest
-          tags: ['always']
-
-        - name: Enable automatic system updates
-          ansible.builtin.debconf:
-            name: unattended-upgrades
-            question: unattended-upgrades/enable_auto_updates
-            vtype: boolean
-            value: 'true'
-          tags: ['always']
-
-        - name: Add configuration file for automatic system updates
-          ansible.builtin.command:
-            cmd: dpkg-reconfigure -f noninteractive unattended-upgrades
-            creates: /etc/apt/apt.conf.d/20auto-upgrades
-          tags: ['always']
-    # -----------------------------------------------------------------------------
-    - name: Docker installation
+    - name: System Package Management and Updates
       become: true
       block:
-        - name: Install required packages needed to add Docker's GPG key
-          ansible.builtin.apt:
+        - name: Install required system packages
+          ansible.builtin.dnf:
             name:
-              - ca-certificates
+              - dnf-automatic
               - curl
+              - gnupg
+              - systemd-container
+              - podman
+              - bash-completion
+              - policycoreutils
+              - policycoreutils-python-utils
             state: latest
             update_cache: true
-          tags: ['always']
 
-        - name: Add Docker's official GPG key
-          ansible.builtin.shell: |
-            install -m 0755 -d /etc/apt/keyrings
-            curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-            chmod a+r /etc/apt/keyrings/docker.asc
-          tags: ['always']
-
-        - name: Add Docker repository
-          ansible.builtin.shell: |
-            echo \
-              "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
-              $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
-              sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-          tags: ['always']
-
-        - name: Install Docker
-          ansible.builtin.apt:
-            name:
-              - docker-ce
-              - docker-ce-cli
-              - containerd.io
-              - docker-buildx-plugin
-              - docker-compose-plugin
-            state: latest
-            update_cache: true
-          tags: ['always']
+        - name: Enable automatic system updates
+          ansible.builtin.lineinfile:
+            path: "/etc/dnf/automatic.conf"
+            regex: "^(#)?{{item.key}} = {{item.value}}"
+            line: "{{item.key}} = {{item.value}}"
+            state: present
+          loop:
+            - {key: "upgrade_type", value: "security"}
+            - {key: "reboot", value: "when-needed"}
+      tags: ['always']
     # -----------------------------------------------------------------------------
     - name: SSH Configuration
       become: true
@@ -156,9 +107,10 @@
             - {key: "UsePAM", value: "yes"}
 
         - name: Restart SSH
-          become: true
-          ansible.builtin.command:
-            cmd: systemctl restart sshd
+          ansible.builtin.systemd_service:
+            name: sshd.service
+            state: restarted
+            enabled: true
           tags: ['always']
     # -----------------------------------------------------------------------------
     - name: DataSHIELD User and Directory Setup
@@ -178,13 +130,6 @@
             creates: "/var/lib/systemd/linger/{{ datashield_username }}"
           tags: ['always']
 
-        # Ubuntu 22.04
-        - name: Allow the MDR-RA DataSHIELD user to run Docker containers
-          ansible.builtin.shell: |
-            groupadd docker
-            usermod -aG docker {{ datashield_username }}
-          tags: ['always']
-
         - name: Create required directories for DataSHIELD setup files
           ansible.builtin.file:
             path: "{{ item }}"
@@ -194,9 +139,11 @@
             mode: '0750'
           loop:
             - "{{ install_dir_path }}/nginx"
+            - "{{ install_dir_path }}/nginx_logs"
             - "{{ install_dir_path }}/https"
             - "{{ install_dir_path }}/https/ca"
             - "{{ install_dir_path }}/https/cert"
+            - "{{ install_dir_path }}/selinux"
           tags: ['always']
 
         - name: Create required directories for DataSHIELD data storage
@@ -206,6 +153,14 @@
             state: directory
             mode: '0750'
           loop: "{{ storage_dir_path_list }}"
+          tags: ['always']
+
+        - name: Set ownership for DB data directories owned by non-root users
+          become_user: "{{ datashield_username }}"
+          ansible.builtin.command: "podman unshare chown -R 1001:1001 {{ item }}"
+          with_items:
+            - "{{ install_dir_path }}/db/mongo"
+            - "{{ install_dir_path }}/db/postgres"
           tags: ['always']
     # -----------------------------------------------------------------------------
     - name: HTTPS Certificate Management
@@ -238,14 +193,14 @@
 
             - name: Check if a valid privkey.pem is provided
               ansible.builtin.stat:
-                path: "certs/privkey.pem"
+                path: "cert/privkey.pem"
               register: https_user_provided_cert_privkey
               tags: ['always']
 
             - name: Check if a valid fullchain.pem is provided
               become_user: "{{ datashield_username }}"
               ansible.builtin.stat:
-                path: "certs/fullchain.pem"
+                path: "cert/fullchain.pem"
               register: https_user_provided_cert_fullchain
               tags: ['always']
 
@@ -259,7 +214,7 @@
           block:
             - name: Copy user-provided HTTPS private key and certificate
               ansible.builtin.copy:
-                src: "certs/{{ item }}"
+                src: "cert/{{ item }}"
                 dest: "{{ install_dir_path }}/https/cert"
                 owner: "{{ datashield_username }}"
                 group: "{{ datashield_username }}"
@@ -334,8 +289,10 @@
               community.crypto.openssl_csr_pipe:
                 privatekey_path: "{{ install_dir_path }}/https/cert/privkey.pem"
                 subject_alt_name:
-                  - "DNS:mdr-ra"
-                  - "DNS:kvm.opal.ubuntu22" # TODO: Remove, added for testing pourpouse
+                  - "DNS:{{ domain_name }}"
+                  - "DNS:mdr-ra.local"
+                  - "DNS:datashield.local"
+                  - "DNS:opal.local"
               run_once: true
               register: csr
               tags: ['always']
@@ -360,63 +317,124 @@
               run_once: true
               tags: ['always']
     # -----------------------------------------------------------------------------
-    - name: Firewall Configuration (UFW)
+    - name: Hosts configuration
       become: true
       block:
-        - name: Reset the firewall
-          community.general.ufw:
-            state: reset
+        - name: Fetching public IP address
+          shell: ip addr show scope global | awk '/inet/ { ip = $2; sub(/\/.*/, "", ip); print ip }' | head -n 1
+          register: public_ip_addr
           tags: ['always']
 
-        - name: Allow outgoing connections
-          community.general.ufw:
-            default: allow
-            direction: outgoing
-          tags: ['always', 'firewall']
+        - name: Print public IP address
+          debug:
+            var: public_ip_addr.stdout
+          tags: ['always']
 
-        - name: Block incoming connections
-          community.general.ufw:
-            default: deny
-            direction: incoming
-          tags: ['always', 'firewall']
-
-        - name: Allow DataSHIELD HTTPS connections
-          community.general.ufw:
-            rule: allow
-            direction: in
-            port: '{{ public_https_port }}'
-            proto: tcp
-            from_ip: '{{ item }}'
-          loop: "{{ allowed_https_client_networks }}"
-          tags: ['public_ip', 'firewall']
-          when: "'public_ip' in ansible_run_tags"
-
-        - name: Enable rate limiting for the DataSHIELD HTTPS interface
-          community.general.ufw:
-            rule: limit
-            port: '{{ public_https_port }}'
-            proto: tcp
-          tags: ['public_ip', 'firewall']
-          when: "'public_ip' in ansible_run_tags"
-
-        - name: Allow SSH connections for system administrators
-          community.general.ufw:
-            rule: allow
-            direction: in
-            port: 22
-            proto: tcp
-            from_ip: '{{ item }}'
-          loop: "{{ allowed_ssh_client_networks }}"
-          tags: ['always', 'firewall']
-
-        - name: Enable Firewall
-          community.general.ufw:
-            state: enabled
-          tags: ['always', 'firewall']
+        - name: Update /etc/hosts with a resolvable service name (mdr-ra)
+          lineinfile:
+            path: /etc/hosts
+            regexp: "host"
+            line: "{{ public_ip_addr.stdout }} {{ domain_name }}"
+            state: present
+          tags: ['always']
     # -----------------------------------------------------------------------------
-    - name: Software Installation Setup
+    - name: Firewall Configuration (firewalld)
       become: true
       block:
+        - name: Enable firewalld
+          ansible.builtin.systemd:
+            name: firewalld.service
+            state: started
+            enabled: true
+          tags: ['always']
+
+        # - name: Nuke existing firewalld configurations
+        #   ansible.builtin.command: "firewall-cmd --reset-to-default"
+        #   tags: ['always']
+
+        - name: Get all the active services
+          ansible.builtin.command: "firewall-cmd --list-services"
+          tags: ['always', 'firewall']
+
+        - name: Permanently enable the SSH service
+          ansible.posix.firewalld:
+            port: 22/tcp
+            state: enabled
+            permanent: true
+            immediate: true
+            offline: true
+          tags: ['always', 'firewall']
+
+        - name: Permanently enable the HTTPS service
+          ansible.posix.firewalld:
+            port: "{{ public_https_port }}/tcp"
+            state: enabled
+            permanent: true
+            immediate: true
+            offline: true
+          tags: ['public_ip', 'firewall']
+          when: "'public_ip' in ansible_run_tags"
+
+        - name: Reload firewalld
+          ansible.builtin.command: "firewall-cmd --reload"
+          tags: ['always', 'firewall']
+
+    # -----------------------------------------------------------------------------
+    - name: Application File Copy and Configuration
+      become: true
+      block:
+        - name: Copy installation and configuration files - datashield-opal-kube.yml
+          ansible.builtin.copy:
+            src: "files/datashield-opal-kube.yml"
+            dest: "{{ install_dir_path }}"
+            owner: "{{ datashield_username }}"
+            group: "{{ datashield_username }}"
+          tags: ['always']
+
+        - name: Set the desired HTTPS service port
+          ansible.builtin.replace:
+            path: "{{ install_dir_path }}/datashield-opal-kube.yml"
+            regexp: '^(\s*hostPort:) .* (# ANSIBLE REPLACE MARKER HTTPS PORT)'
+            replace: '\1 {{ public_https_port }} \2'
+          tags: ['always']
+
+        - name: Set the right image version on the kube file
+          ansible.builtin.replace:
+            path: "{{ install_dir_path }}/datashield-opal-kube.yml"
+            regexp: '^(\s*image:) .* (# ANSIBLE REPLACE MARKER OPAL IMAGE)'
+            replace: '\1 "{{ opal_image_tag }}" \2'
+          loop:
+            - {}
+          tags: ['always']
+
+        - name: Set the right image version for opal
+          ansible.builtin.replace:
+            path: "{{ install_dir_path }}/datashield-opal-kube.yml"
+            regexp: '^(\s*image:) .* (# ANSIBLE REPLACE MARKER OPAL IMAGE)'
+            replace: '\1 "{{ opal_image_tag }}" \2'
+          tags: ['always']
+
+        - name: Set the right image version for postgres
+          ansible.builtin.replace:
+            path: "{{ install_dir_path }}/datashield-opal-kube.yml"
+            regexp: '^(\s*image:) .* (# ANSIBLE REPLACE MARKER POSTGRES IMAGE)'
+            replace: '\1 "{{ postgres_image_tag }}" \2'
+          tags: ['always']
+
+        - name: Set the right image version for rock
+          ansible.builtin.replace:
+            path: "{{ install_dir_path }}/datashield-opal-kube.yml"
+            regexp: '^(\s*image:) .* (# ANSIBLE REPLACE MARKER ROCK IMAGE)'
+            replace: '\1 "{{ rock_image_tag }}" \2'
+          tags: ['always']
+
+        - name: Set the right image version for nginx
+          ansible.builtin.replace:
+            path: "{{ install_dir_path }}/datashield-opal-kube.yml"
+            regexp: '^(\s*image:) .* (# ANSIBLE REPLACE MARKER NGINX IMAGE)'
+            replace: '\1 "{{ nginx_image_tag }}" \2'
+          tags: ['always']
+
         - name: Copy installation and configuration files - NGINX files
           ansible.builtin.copy:
             src: "files/nginx/{{ item }}"
@@ -425,51 +443,97 @@
             group: "{{ datashield_username }}"
           loop:
             - server.conf
+            - rules.conf
           tags: ['always']
 
-        - name: Set ownership for HTTPS certs
-          ansible.builtin.command: "chown 1001:1001 -R \
-                                    {{ install_dir_path }}/https/cert/"
-          tags: ['always']
-
-        - name: Copy compose files to install location
+        - name: Copy installation and configuration files - SELinux files
           ansible.builtin.copy:
-            src: "{{ item }}"
-            dest: "{{ install_dir_path }}"
+            src: "files/selinux/{{ item }}"
+            dest: "{{ install_dir_path }}/selinux"
             owner: "{{ datashield_username }}"
             group: "{{ datashield_username }}"
           loop:
-            - "files/datashield-opal-compose.yml"
-            - "files/datashield-opal-compose.env"
+            #- allow_container_setattr_usr_dir.pp
+            - allow_container_write_usr_dir.pp
+            - allow_container_usr_fs.pp
           tags: ['always']
 
-        - name: Set the desired HTTPS service port in the compose file
-          ansible.builtin.replace:
-            path: "{{ install_dir_path }}/datashield-opal-compose.env"
-            regexp: '^(HTTPS_PORT)=.*(# ANSIBLE REPLACE HTTPS PORT)'
-            replace: '\1={{ public_https_port }} \2'
-          tags: ['always']
-
-        - name: Pull container images
-          become_user: "{{ datashield_username }}"
-          ansible.builtin.command:
-            cmd: "docker pull {{ item }}"
+        - name: Install SELinux policies
+          ansible.builtin.command: "semodule -i {{ install_dir_path }}/selinux/{{ item }}"
           loop:
-            - "{{ opal_image_tag }}"
-            - "{{ postgres_image_tag }}"
-            - "{{ rock_image_tag }}"
-            - "{{ nginx_image_tag }}"
+            #- allow_container_setattr_usr_dir.pp
+            - allow_container_write_usr_dir.pp
+            - allow_container_usr_fs.pp
           tags: ['always']
 
-        - name: If present, stop the service
+        - name: Set ownership for the HTTPS private key
           become_user: "{{ datashield_username }}"
-          ansible.builtin.command:
-            cmd: "docker compose --file {{ install_dir_path }}/datashield-opal-compose.yml down"
+          ansible.builtin.command: "podman unshare chown 1001:1001 {{ install_dir_path }}/https/cert/privkey.pem"
+          tags: ['always']
+
+        - name: Set ownership for the HTTPS certificate
+          become_user: "{{ datashield_username }}"
+          ansible.builtin.command: "podman unshare chown 1001:1001 {{ install_dir_path }}/https/cert/fullchain.pem"
+          tags: ['always']
+
+        - name: Create a dedicated Podman network
+          become_user: "{{ datashield_username }}"
+          containers.podman.podman_network:
+            name: "{{ podman_network }}"
+          tags: ['always']
+
+        - name: Create required directories for DataSHIELD setup files
+          ansible.builtin.file:
+            path: "{{ quadlets_dir_path }}"
+            state: directory
+            owner: "{{ datashield_username }}"
+            group: "{{ datashield_username }}"
+            mode: '0750'
+          tags: ['always']
+
+        - name: Copy quadlet files to install location
+          ansible.builtin.copy:
+            src: "files/opal-datashield.kube"
+            dest: "{{ quadlets_dir_path }}"
+            owner: "{{ datashield_username }}"
+            group: "{{ datashield_username }}"
+          tags: ['always']
+
+    # -------------------------------------------------------------------------
+    - name: Pull container images
+      become: true
+      become_user: "{{ datashield_username }}"
+      containers.podman.podman_image:
+        name: "{{ item }}"
+      loop:
+        - "{{ opal_image_tag }}"
+        - "{{ postgres_image_tag }}"
+        - "{{ rock_image_tag }}"
+        - "{{ nginx_image_tag }}"
+      tags: ['always']
+
+    # -------------------------------------------------------------------------
+    - name: Service Management
+      become: true
+      become_user: "{{ datashield_username }}"
+      block:
+        - name: If present, stop the service
+          ansible.builtin.systemd_service:
+            scope: "user"
+            name: "opal-datashield.service"
+            state: "started"
           ignore_errors: true
           tags: ['always']
 
+        - name: Reload systemd daemon and create service definitions
+          ansible.builtin.systemd_service:
+            daemon_reload: true
+            scope: "user"
+          tags: ['always']
+
         - name: Start the service
-          become_user: "{{ datashield_username }}"
-          ansible.builtin.command:
-            cmd: "docker compose --env-file {{ install_dir_path }}/datashield-opal-compose.env --file {{ install_dir_path }}/datashield-opal-compose.yml up --detach"
+          ansible.builtin.systemd_service:
+            scope: "user"
+            name: "opal-datashield.service"
+            state: "started"
           tags: ['always']

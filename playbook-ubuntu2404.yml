@@ -53,17 +53,18 @@
         - name: Install required system packages
           ansible.builtin.apt:
             name:
+              - acl
               - ca-certificates
               - curl
+              - dbus-user-session
               - gnupg
               - lsb-release
-              - uidmap
-              - dbus-user-session
-              - systemd-container
-              - unattended-upgrades
-              - acl
-              - ufw
+              - openssl
               - podman
+              - systemd-container
+              - ufw
+              - uidmap
+              - unattended-upgrades
             state: latest
           tags: ['always']
 
@@ -291,6 +292,10 @@
                 provider: selfsigned
               tags: ['always']
 
+            - name: HTTPS - Create .crt CA certificate from PEM
+              shell: "openssl x509 -inform PEM -in {{ install_dir_path }}/https/ca/ca-certificate.pem -out {{ install_dir_path }}/https/ca/ca-certificate.crt"
+              tags: ['always']
+
             - name: HTTPS - Create a private key for the new certificate
               community.crypto.openssl_privatekey:
                 path: "{{ install_dir_path }}/https/cert/privkey.pem"
@@ -301,7 +306,10 @@
               community.crypto.openssl_csr_pipe:
                 privatekey_path: "{{ install_dir_path }}/https/cert/privkey.pem"
                 subject_alt_name:
-                  - "DNS:mdr-ra"
+                  - "DNS:{{ domain_name }}"
+                  - "DNS:mdr-ra.local"
+                  - "DNS:datashield.local"
+                  - "DNS:opal.local"
               run_once: true
               register: csr
               tags: ['always']
@@ -326,7 +334,28 @@
               run_once: true
               tags: ['always']
     # -----------------------------------------------------------------------------
-    - name: Firewall Configuration (UFW) / (Ubuntu 24, should work for Ubuntu 22 as well)
+    - name: Hosts configuration
+      become: true
+      block:
+        - name: Fetching public IP address
+          shell: ip addr show scope global | awk '/inet/ { ip = $2; sub(/\/.*/, "", ip); print ip }' | head -n 1
+          register: public_ip_addr
+          tags: ['always']
+
+        - name: Print public IP address
+          debug:
+            var: public_ip_addr.stdout
+          tags: ['always']
+
+        - name: Update /etc/hosts with a resolvable service name (mdr-ra)
+          lineinfile:
+            path: /etc/hosts
+            regexp: "host"
+            line: "{{ public_ip_addr.stdout }} {{ domain_name }}"
+            state: present
+          tags: ['always']
+    # -----------------------------------------------------------------------------
+    - name: Firewall Configuration (UFW) / Ubuntu 24
       become: true
       block:
         - name: Reset

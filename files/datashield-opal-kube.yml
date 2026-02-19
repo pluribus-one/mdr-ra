@@ -16,6 +16,8 @@ spec:
       volumeMounts:
         - name: opal-data
           mountPath: /srv
+        - name: ca-certs
+          mountPath: /usr/local/share/ca-certificates/mdr-ra
       envFrom:
         - configMapRef:
             name: opal-env
@@ -29,6 +31,11 @@ spec:
             configMapKeyRef:
               name: opal-env
               key: OPAL_ADMINISTRATOR_PASSWORD
+        - name: USE_SYSTEM_CA_CERTS
+          valueFrom:
+            configMapKeyRef:
+              name: opal-env
+              key: USE_SYSTEM_CA_CERTS
         - name: POSTGRESDATA_DATABASE
           valueFrom:
             configMapKeyRef:
@@ -58,6 +65,10 @@ spec:
     - name: opal-data
       hostPath:
         path: /opt/mdr-ra/db/opal
+        type: Directory
+    - name: ca-certs
+      hostPath:
+        path: /opt/mdr-ra/https/ca
         type: Directory
 ---
 apiVersion: v1
@@ -119,10 +130,16 @@ spec:
       volumeMounts:
         - mountPath: /var/lib/rock/R/library
           name: mdr-ra-rock-dependencies
+        - name: ca-certs
+          mountPath: /usr/local/share/ca-certificates/mdr-ra
   volumes:
     - name: mdr-ra-rock-dependencies
       persistentVolumeClaim:
         claimName: mdr-ra-rock-dependencies
+    - name: ca-certs
+      hostPath:
+        path: /opt/mdr-ra/https/ca
+        type: Directory
 ---
 apiVersion: v1
 kind: Pod
@@ -173,6 +190,7 @@ metadata:
 data:
   OPAL_PORT: 8080
   OPAL_ADMINISTRATOR_PASSWORD: administrator
+  USE_SYSTEM_CA_CERTS: true
 ---
 apiVersion: v1
 kind: ConfigMap

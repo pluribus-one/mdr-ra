@@ -4,9 +4,7 @@ source /etc/os-release
 
 source utils/get_env.sh
 
-if [ "$ID" = "ubuntu" ] && [ "$VERSION_ID" = "22.04" ]; then
-    :
-elif [ "$ID" = "ubuntu" ] && [ "$VERSION_ID" = "24.04" ]; then
+if [ "$ID" = "ubuntu" ] && [ "$VERSION_ID" = "24.04" ]; then
     :
 elif [ "$PLATFORM_ID" = "platform:el9" ]; then
     :

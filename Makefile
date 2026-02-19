@@ -20,3 +20,6 @@ shell:
 
 uninstall:
 	@utils/uninstall.sh
+
+functional-tests:
+	@utils/run_functional_tests.sh

@@ -1,3 +1,11 @@
+## 2026-02-18
+
+* Introduced a `make functional-tests` command which will enable users to test
+  the platform either remotely or directly from the DataSHIELD deployment host
+* Removed support for Ubuntu 22.04 (too close to EOL)
+* Renamed Rocky Linux playbook to RHEL (supports all RHEL/9.x-compatible
+  distributions)
+
 ## 2025-08-06
 
 * Improved support for multiple Linux distributions: Ubuntu 22.04, 
