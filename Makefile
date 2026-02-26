@@ -23,3 +23,6 @@ uninstall:
 
 functional-tests:
 	@utils/run_functional_tests.sh
+
+functional-tests-local:
+	@DATASHIELD_URL=https://datashield.local:4443 utils/run_functional_tests.sh

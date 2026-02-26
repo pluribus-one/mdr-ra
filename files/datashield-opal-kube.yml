@@ -146,7 +146,7 @@ kind: Pod
 metadata:
   name: mdr-ra-http-server
 spec:
-  hostname: nginx
+  hostname: datashield.local
   restartPolicy: Always
   containers:
     - name: nginx
