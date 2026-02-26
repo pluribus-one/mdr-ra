@@ -46,14 +46,15 @@
         - name: Install required system packages
           ansible.builtin.dnf:
             name:
-              - dnf-automatic
-              - curl
-              - gnupg
-              - systemd-container
-              - podman
               - bash-completion
+              - curl
+              - dnf-automatic
+              - gnupg
+              - openssl
+              - podman
               - policycoreutils
               - policycoreutils-python-utils
+              - systemd-container
             state: latest
             update_cache: true
 
@@ -277,6 +278,10 @@
                 privatekey_path: "{{ install_dir_path }}/https/ca/ca-certificate.key"
                 privatekey_passphrase: "{{ datashield_username }}"
                 provider: selfsigned
+              tags: ['always']
+
+            - name: HTTPS - Create .crt CA certificate from PEM
+              shell: "openssl x509 -inform PEM -in {{ install_dir_path }}/https/ca/ca-certificate.pem -out {{ install_dir_path }}/https/ca/ca-certificate.crt"
               tags: ['always']
 
             - name: HTTPS - Create a private key for the new certificate
